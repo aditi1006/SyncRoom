@@ -1,0 +1,97 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Design tokens — dark is the primary theme (cinematic), light fully supported. */
+:root {
+  --surface: 248 250 252; /* slate-50 */
+  --surface-raised: 255 255 255;
+  --surface-overlay: 241 245 249;
+  --ink: 15 23 42; /* slate-900 */
+  --ink-dim: 71 85 105; /* slate-600 */
+  --ink-faint: 148 163 184; /* slate-400 */
+  --accent: 79 70 229; /* indigo-600 */
+  --accent-hover: 67 56 202;
+  --danger: 220 38 38;
+  --success: 22 163 74;
+  --warning: 217 119 6;
+  --line: 226 232 240;
+  --glass: rgba(255, 255, 255, 0.72);
+}
+
+.dark {
+  --surface: 9 11 20; /* deep navy-black */
+  --surface-raised: 17 20 33;
+  --surface-overlay: 26 30 48;
+  --ink: 241 245 249;
+  --ink-dim: 148 163 184;
+  --ink-faint: 100 116 139;
+  --accent: 99 102 241; /* indigo-500 */
+  --accent-hover: 129 140 248;
+  --danger: 248 113 113;
+  --success: 74 222 128;
+  --warning: 251 191 36;
+  --line: 39 44 66;
+  --glass: rgba(17, 20, 33, 0.66);
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  @apply bg-surface font-sans text-ink antialiased;
+  overscroll-behavior: none;
+}
+
+/* Frosted panel used for control bars, side panels and modals. */
+.glass {
+  background: var(--glass);
+  backdrop-filter: blur(20px) saturate(1.4);
+  -webkit-backdrop-filter: blur(20px) saturate(1.4);
+  border: 1px solid rgb(var(--line) / 0.7);
+}
+
+::selection {
+  background: rgb(var(--accent) / 0.35);
+}
+
+*:focus-visible {
+  outline: 2px solid rgb(var(--accent));
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Slim, unobtrusive scrollbars. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(var(--ink-faint) / 0.4) transparent;
+}
+*::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+*::-webkit-scrollbar-thumb {
+  background: rgb(var(--ink-faint) / 0.4);
+  border-radius: 999px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Video tiles mirror the local camera like every meeting product. */
+.mirror {
+  transform: scaleX(-1);
+}

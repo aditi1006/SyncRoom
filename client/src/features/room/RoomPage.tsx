@@ -1,0 +1,351 @@
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { PhoneOff } from 'lucide-react';
+import { expectedTime, normalizeRoomCode, type JoinErrorReason } from '@syncroom/shared';
+import { socket, serverNow, startClockSync, stopClockSync } from '@/lib/socket';
+import { wireSocketToStore } from '@/lib/wireSocket';
+import { getParticipantKey, saveName } from '@/lib/session';
+import { useRoomStore } from '@/store/room';
+import { useLocalMedia } from '@/features/call/useLocalMedia';
+import { usePeerConnections } from '@/features/call/usePeerConnections';
+import { useCallStats } from '@/features/call/useCallStats';
+import { useKeyboardShortcuts, type ShortcutMap } from '@/hooks/useKeyboardShortcuts';
+import { useFullscreen } from '@/hooks/useFullscreen';
+import { Lobby } from '@/features/lobby/Lobby';
+import { TopBar } from './TopBar';
+import { VideoGrid } from './VideoGrid';
+import { ControlBar } from './ControlBar';
+import { ParticipantsPanel } from './ParticipantsPanel';
+import { ChatPanel } from '@/features/chat/ChatPanel';
+import { SyncPanel } from '@/features/sync/SyncPanel';
+import { PlayerStage } from '@/features/sync/PlayerStage';
+import { SettingsModal } from '@/features/settings/SettingsModal';
+import { Toasts } from '@/components/ui/Toasts';
+import { Button } from '@/components/ui/Button';
+
+const IN_ROOM_KEY = 'syncroom:in-room';
+
+const JOIN_ERRORS: Record<JoinErrorReason, string> = {
+  'not-found': 'This room does not exist (or already ended). Check the code.',
+  locked: 'The host locked this room.',
+  'invalid-code': 'That room code is not valid.',
+  'invalid-name': 'That name is not valid.',
+  duplicate: 'You are already in this room in another tab.',
+  'room-exists':
+    'A room with this code already exists — joining it instead requires the plain link.',
+  'rate-limited': 'Too many attempts. Wait a moment and try again.',
+  'room-full': 'This room is full (8 participants max).',
+};
+
+export function RoomPage() {
+  const params = useParams<{ code: string }>();
+  const code = normalizeRoomCode(params.code ?? '');
+  const [search, setSearch] = useSearchParams();
+  const navigate = useNavigate();
+
+  const joined = useRoomStore((s) => s.joined);
+  const ending = useRoomStore((s) => s.ending);
+  const micOn = useRoomStore((s) => s.micOn);
+  const cameraOn = useRoomStore((s) => s.cameraOn);
+  const panel = useRoomStore((s) => s.panel);
+  const setPanel = useRoomStore((s) => s.setPanel);
+  const setMedia = useRoomStore((s) => s.setMedia);
+  const hasMedia = useRoomStore((s) => s.syncState?.media != null);
+
+  const [joining, setJoining] = useState(false);
+  const [joinError, setJoinError] = useState('');
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [screenStream, setScreenStream] = useState<MediaStream | null>(null);
+  /* Ref mirror so the unmount cleanup can stop tracks without stale closures. */
+  const screenStreamRef = useRef<MediaStream | null>(null);
+  screenStreamRef.current = screenStream;
+  useEffect(
+    () => () => {
+      screenStreamRef.current?.getTracks().forEach((t) => t.stop());
+    },
+    [],
+  );
+
+  const local = useLocalMedia();
+  const { feeds, peersRef, syncAllTracks } = usePeerConnections({
+    active: joined,
+    localStream: local.stream,
+    screenStream,
+  });
+  const stats = useCallStats(peersRef, joined);
+
+  const pageRef = useRef<HTMLDivElement>(null);
+  const { isFullscreen, toggle: toggleFullscreen } = useFullscreen(pageRef);
+
+  /* Connect socket + listeners for the lifetime of this page. */
+  useEffect(() => {
+    wireSocketToStore();
+    socket.connect();
+    startClockSync();
+    return () => {
+      stopClockSync();
+      socket.emit('room:leave');
+      socket.disconnect();
+      useRoomStore.getState().reset();
+    };
+  }, []);
+
+  const join = useCallback(
+    (name: string): void => {
+      saveName(name);
+      setJoining(true);
+      setJoinError('');
+      socket.emit(
+        'room:join',
+        {
+          code,
+          name,
+          participantKey: getParticipantKey(),
+          create: search.get('create') === '1',
+        },
+        (res) => {
+          setJoining(false);
+          if (!res.ok || !res.selfId || !res.room) {
+            setJoinError(JOIN_ERRORS[res.reason ?? 'not-found']);
+            return;
+          }
+          useRoomStore.getState().setJoined(res.selfId, res.room, res.chatHistory ?? []);
+          sessionStorage.setItem(IN_ROOM_KEY, code);
+          if (search.get('create')) setSearch({}, { replace: true });
+        },
+      );
+    },
+    [code, search, setSearch],
+  );
+
+  /* Silent rejoin after a transport drop or server restart. */
+  useEffect(() => {
+    const onReconnect = (): void => {
+      startClockSync();
+      const st = useRoomStore.getState();
+      if (st.joined && sessionStorage.getItem(IN_ROOM_KEY) === code) {
+        const name = st.room?.participants.find((p) => p.id === st.selfId)?.name ?? 'Guest';
+        socket.emit(
+          'room:join',
+          { code, name, participantKey: getParticipantKey(), create: true },
+          (res) => {
+            if (res.ok && res.selfId && res.room) {
+              st.setJoined(res.selfId, res.room, res.chatHistory ?? []);
+              st.toast('success', 'Reconnected.');
+            }
+          },
+        );
+      }
+    };
+    socket.io.on('reconnect', onReconnect);
+    return () => {
+      socket.io.off('reconnect', onReconnect);
+    };
+  }, [code]);
+
+  /* Mirror mic/cam flags into tracks + presence.
+     Presence is emitted only when a flag actually transitions — never as a
+     side effect of unrelated re-renders (that once caused an emit/broadcast
+     feedback loop and rate-limit toast spam). */
+  const sentPresence = useRef<{ micOn: boolean | null; cameraOn: boolean | null }>({
+    micOn: null,
+    cameraOn: null,
+  });
+  useEffect(() => {
+    local.setTrackEnabled('audio', micOn);
+    if (joined && sentPresence.current.micOn !== micOn) {
+      sentPresence.current.micOn = micOn;
+      socket.emit('presence:update', { micOn });
+    }
+  }, [micOn, joined, local]);
+  useEffect(() => {
+    local.setTrackEnabled('video', cameraOn);
+    if (joined && sentPresence.current.cameraOn !== cameraOn) {
+      sentPresence.current.cameraOn = cameraOn;
+      socket.emit('presence:update', { cameraOn });
+    }
+  }, [cameraOn, joined, local]);
+  /* Reset the change tracker when leaving so a rejoin re-announces flags. */
+  useEffect(() => {
+    if (!joined) sentPresence.current = { micOn: null, cameraOn: null };
+  }, [joined]);
+
+  const stopShare = useCallback((): void => {
+    setScreenStream((s) => {
+      s?.getTracks().forEach((t) => t.stop());
+      return null;
+    });
+    setMedia({ sharing: false });
+    if (socket.connected) socket.emit('presence:update', { screenSharing: false });
+  }, [setMedia]);
+
+  const toggleShare = useCallback(async (): Promise<void> => {
+    if (screenStream) {
+      stopShare();
+      return;
+    }
+    try {
+      const stream = await navigator.mediaDevices.getDisplayMedia({
+        video: { frameRate: { ideal: 30 } },
+        audio: true,
+      });
+      stream.getVideoTracks().forEach((t) => {
+        t.contentHint = 'detail';
+        t.onended = stopShare; // browser "stop sharing" button
+      });
+      setScreenStream(stream);
+      setMedia({ sharing: true });
+      socket.emit('presence:update', { screenSharing: true });
+    } catch {
+      /* user cancelled the picker */
+    }
+  }, [screenStream, stopShare, setMedia]);
+
+  const leave = useCallback((): void => {
+    stopShare();
+    local.stop();
+    sessionStorage.removeItem(IN_ROOM_KEY);
+    navigate('/');
+  }, [stopShare, local, navigate]);
+
+  /* Space toggles synced playback for controllers. */
+  const togglePlayback = useCallback((): void => {
+    const st = useRoomStore.getState();
+    const sync = st.syncState;
+    if (!sync?.media) return;
+    const canControl = st.room?.controlMode === 'everyone' || st.room?.hostId === st.selfId;
+    if (!canControl) return;
+    const now = expectedTime(sync, serverNow());
+    if (sync.playing) socket.emit('sync:pause', { time: now, eventId: crypto.randomUUID() });
+    else socket.emit('sync:play', { time: sync.time, eventId: crypto.randomUUID() });
+  }, []);
+
+  const shortcuts = useMemo<ShortcutMap>(
+    () => ({
+      m: () => setMedia({ micOn: !useRoomStore.getState().micOn }),
+      v: () => setMedia({ cameraOn: !useRoomStore.getState().cameraOn }),
+      s: () => void toggleShare(),
+      c: () => setPanel(useRoomStore.getState().panel === 'chat' ? null : 'chat'),
+      p: () => setPanel(useRoomStore.getState().panel === 'people' ? null : 'people'),
+      w: () => setPanel(useRoomStore.getState().panel === 'media' ? null : 'media'),
+      f: toggleFullscreen,
+      space: togglePlayback,
+      escape: () => setPanel(null),
+    }),
+    [setMedia, setPanel, toggleShare, toggleFullscreen, togglePlayback],
+  );
+  useKeyboardShortcuts(joined ? shortcuts : {});
+
+  /* Kicked / meeting ended overlay. */
+  if (ending) {
+    return (
+      <div className="flex min-h-dvh flex-col items-center justify-center gap-4 p-6 text-center">
+        <span className="flex h-14 w-14 items-center justify-center rounded-full bg-danger/15 text-danger">
+          <PhoneOff size={24} />
+        </span>
+        <h1 className="text-xl font-semibold">
+          {ending === 'kicked' ? 'You were removed from the room' : 'The host ended this meeting'}
+        </h1>
+        <Button onClick={leave}>Back to home</Button>
+      </div>
+    );
+  }
+
+  if (!joined) {
+    return (
+      <>
+        <Lobby
+          code={code}
+          local={local}
+          joining={joining}
+          joinError={joinError}
+          autoJoin={sessionStorage.getItem(IN_ROOM_KEY) === code}
+          onJoin={join}
+        />
+        <Toasts />
+      </>
+    );
+  }
+
+  const panelTitle = panel === 'chat' ? 'Chat' : panel === 'people' ? 'People' : 'Watch together';
+
+  return (
+    <div ref={pageRef} className="flex h-dvh flex-col bg-surface">
+      <TopBar stats={stats} onOpenSettings={() => setSettingsOpen(true)} />
+
+      <div className="flex min-h-0 flex-1 gap-3 px-3 pb-2">
+        <main className="min-h-0 min-w-0 flex-1">
+          {hasMedia ? (
+            <div className="flex h-full min-h-0 flex-col gap-2 lg:flex-row">
+              <div className="min-h-0 flex-1">
+                <PlayerStage />
+              </div>
+              <div className="h-28 shrink-0 lg:h-auto lg:w-52">
+                <VideoGrid
+                  strip
+                  localStream={local.stream}
+                  screenStream={screenStream}
+                  feeds={feeds}
+                  stats={stats}
+                />
+              </div>
+            </div>
+          ) : (
+            <VideoGrid
+              localStream={local.stream}
+              screenStream={screenStream}
+              feeds={feeds}
+              stats={stats}
+            />
+          )}
+        </main>
+
+        {panel && (
+          <aside
+            className="glass fixed inset-x-2 bottom-24 top-16 z-30 flex flex-col overflow-hidden rounded-2xl shadow-2xl animate-slide-in-right sm:static sm:inset-auto sm:z-auto sm:w-80 sm:shrink-0"
+            aria-label={panelTitle}
+          >
+            <div className="flex items-center justify-between border-b border-line px-4 py-3">
+              <h2 className="text-sm font-semibold">{panelTitle}</h2>
+              <button
+                type="button"
+                aria-label="Close panel"
+                className="cursor-pointer rounded-lg px-2 py-1 text-xs text-ink-faint transition-colors hover:bg-surface-overlay hover:text-ink"
+                onClick={() => setPanel(null)}
+              >
+                Esc
+              </button>
+            </div>
+            <div className="min-h-0 flex-1">
+              {panel === 'chat' && <ChatPanel />}
+              {panel === 'people' && <ParticipantsPanel />}
+              {panel === 'media' && <SyncPanel />}
+            </div>
+          </aside>
+        )}
+      </div>
+
+      <footer className="px-3 pb-3">
+        <ControlBar
+          onToggleMic={() => setMedia({ micOn: !micOn })}
+          onToggleCamera={() => setMedia({ cameraOn: !cameraOn })}
+          onToggleShare={() => void toggleShare()}
+          onLeave={leave}
+          onToggleFullscreen={toggleFullscreen}
+          isFullscreen={isFullscreen}
+        />
+      </footer>
+
+      <SettingsModal
+        open={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+        onDeviceChange={(kind, deviceId) => {
+          const op =
+            kind === 'camera' ? local.switchCamera(deviceId) : local.switchMicrophone(deviceId);
+          void op.then(() => syncAllTracks());
+        }}
+      />
+      <Toasts />
+    </div>
+  );
+}

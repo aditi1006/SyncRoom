@@ -1,0 +1,36 @@
+{
+  "name": "syncroom",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "High-quality peer-to-peer video calls with synchronized media playback (Google Meet + Teleparty).",
+  "workspaces": [
+    "shared",
+    "server",
+    "client"
+  ],
+  "scripts": {
+    "dev": "concurrently -n server,client -c blue,magenta \"npm:dev -w server\" \"npm:dev -w client\"",
+    "build": "npm run build -w shared --if-present && npm run build -w server && npm run build -w client",
+    "start": "node server/dist/index.js",
+    "typecheck": "npm run typecheck -w shared && npm run typecheck -w server && npm run typecheck -w client",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "npm run test -w shared && npm run test -w server && npm run test -w client",
+    "test:e2e": "playwright test"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.18.0",
+    "@playwright/test": "^1.49.1",
+    "concurrently": "^9.1.2",
+    "eslint": "^9.18.0",
+    "eslint-plugin-react-hooks": "^5.1.0",
+    "prettier": "^3.4.2",
+    "typescript": "^5.7.3",
+    "typescript-eslint": "^8.20.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
