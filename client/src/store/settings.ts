@@ -14,25 +14,48 @@ export interface Settings {
   noiseSuppression: boolean;
   echoCancellation: boolean;
   notifications: boolean;
+  /** Mirror the local self-view (like every meeting app). */
+  mirrorVideo: boolean;
+  /** Enter rooms with the microphone muted. */
+  startMicOff: boolean;
+  /** Enter rooms with the camera off. */
+  startCameraOff: boolean;
+  /** Show per-tile and header connection-quality indicators. */
+  showStats: boolean;
+  /** Disable in-app animations/transitions (on top of the OS setting). */
+  reduceMotion: boolean;
 }
 
 interface SettingsStore extends Settings {
   update: (patch: Partial<Settings>) => void;
+  /** Restore every setting to its factory default. */
+  reset: () => void;
 }
+
+/** Factory defaults — reused by the "Reset to defaults" action. */
+export const DEFAULT_SETTINGS: Settings = {
+  theme: 'dark',
+  cameraId: null,
+  micId: null,
+  speakerId: null,
+  quality: '1080p',
+  frameRate: 60,
+  noiseSuppression: true,
+  echoCancellation: true,
+  notifications: true,
+  mirrorVideo: true,
+  startMicOff: false,
+  startCameraOff: false,
+  showStats: true,
+  reduceMotion: false,
+};
 
 export const useSettings = create<SettingsStore>()(
   persist(
     (set) => ({
-      theme: 'dark',
-      cameraId: null,
-      micId: null,
-      speakerId: null,
-      quality: '1080p',
-      frameRate: 60,
-      noiseSuppression: true,
-      echoCancellation: true,
-      notifications: true,
+      ...DEFAULT_SETTINGS,
       update: (patch) => set(patch),
+      reset: () => set(DEFAULT_SETTINGS),
     }),
     { name: 'syncroom:settings' },
   ),

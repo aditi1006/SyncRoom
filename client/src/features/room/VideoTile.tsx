@@ -31,6 +31,8 @@ export function VideoTile({
 }: VideoTileProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const speakerId = useSettings((s) => s.speakerId);
+  const mirrorVideo = useSettings((s) => s.mirrorVideo);
+  const showStats = useSettings((s) => s.showStats);
 
   useEffect(() => {
     const el = videoRef.current;
@@ -50,12 +52,38 @@ export function VideoTile({
 
   const showVideo = stream !== null && (cameraOn || isScreen);
 
+  /* Keep the tile playing across PiP transitions. Some browsers pause the
+     inline element when it enters/leaves the PiP window; a MediaStream tile
+     that isn't playing opens a *paused* PiP window, which reads as "PiP
+     paused my video". Re-assert playback whenever the state changes. */
+  useEffect(() => {
+    const el = videoRef.current;
+    if (!el) return;
+    const resume = (): void => {
+      if (el.paused) void el.play().catch(() => {});
+    };
+    el.addEventListener('enterpictureinpicture', resume);
+    el.addEventListener('leavepictureinpicture', resume);
+    return () => {
+      el.removeEventListener('enterpictureinpicture', resume);
+      el.removeEventListener('leavepictureinpicture', resume);
+    };
+  }, []);
+
   const pip = async (): Promise<void> => {
     const el = videoRef.current;
     if (!el) return;
     try {
-      if (document.pictureInPictureElement === el) await document.exitPictureInPicture();
-      else await el.requestPictureInPicture();
+      if (document.pictureInPictureElement === el) {
+        await document.exitPictureInPicture();
+        return;
+      }
+      // A live tile must be actively playing to enter PiP cleanly — a paused
+      // element opens a paused PiP window (or throws). Start it first, then
+      // keep it playing once the transition completes.
+      if (el.paused) await el.play().catch(() => {});
+      await el.requestPictureInPicture();
+      if (el.paused) void el.play().catch(() => {});
     } catch {
       /* PiP unsupported or blocked — non-fatal */
     }
@@ -77,7 +105,7 @@ export function VideoTile({
         className={cn(
           'h-full w-full',
           isScreen ? 'object-contain bg-black' : 'object-cover',
-          isSelf && !isScreen && 'mirror',
+          isSelf && !isScreen && mirrorVideo && 'mirror',
           !showVideo && 'invisible',
         )}
       />
@@ -102,7 +130,7 @@ export function VideoTile({
           )}
         </span>
         <span className="flex items-center gap-1.5">
-          {stats && (
+          {showStats && stats && (
             <span
               className={cn('h-2 w-2 rounded-full', qualityColor[stats.quality])}
               title={`RTT ${stats.rttMs}ms · loss ${stats.packetLossPct}% · ${stats.outboundKbps}kbps`}

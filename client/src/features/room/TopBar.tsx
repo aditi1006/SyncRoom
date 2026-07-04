@@ -11,6 +11,7 @@ import {
   Video,
 } from 'lucide-react';
 import { useRoomStore } from '@/store/room';
+import { useSettings } from '@/store/settings';
 import type { PeerStats } from '@/features/call/useCallStats';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { cn } from '@/lib/utils';
@@ -23,6 +24,7 @@ export function TopBar({
   onOpenSettings: () => void;
 }) {
   const room = useRoomStore((s) => s.room);
+  const showStats = useSettings((s) => s.showStats);
   const [copied, setCopied] = useState(false);
   if (!room) return null;
 
@@ -75,7 +77,7 @@ export function TopBar({
       </div>
 
       <div className="flex items-center gap-2">
-        {overall && worst && (
+        {showStats && overall && worst && (
           <span
             className={cn(
               'hidden items-center gap-1.5 rounded-lg border border-line px-2.5 py-1.5 text-xs sm:flex',

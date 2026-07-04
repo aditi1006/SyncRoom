@@ -103,18 +103,27 @@ describe('room lifecycle over sockets', () => {
     expect(state.playing).toBe(false);
     expect(state.seq).toBeGreaterThan(0);
 
-    // Guest cannot control playback in host-only mode.
-    const before = state;
-    guest.emit('sync:play', { time: 0, eventId: 'guest-evt-1' });
+    // Shared control is the default: a guest can drive playback.
+    const guestDrove = once<SyncState>(host, 'sync:state');
+    guest.emit('sync:play', { time: 3, eventId: 'guest-evt-1' });
+    const guestState = await guestDrove;
+    expect(guestState.playing).toBe(true);
+    expect(guestState.time).toBe(3);
+    expect(guestState.originId).toBe(joined.selfId);
+    expect(guestState.eventId).toBe('guest-evt-1');
+
+    // Host can restrict control to host-only, which blocks guests again.
+    host.emit('room:control-mode', 'host-only');
+    await new Promise((r) => setTimeout(r, 100));
+    guest.emit('sync:pause', { time: 0, eventId: 'guest-evt-2' });
     await new Promise((r) => setTimeout(r, 150));
     const guestSync2 = once<SyncState>(guest, 'sync:state');
     host.emit('sync:play', { time: 5, eventId: 'host-evt-1' });
     const after = await guestSync2;
     expect(after.playing).toBe(true);
     expect(after.time).toBe(5);
-    expect(before.playing).toBe(false);
     // Stamped metadata: monotonic seq, origin + eventId echoed back.
-    expect(after.seq).toBeGreaterThan(state.seq);
+    expect(after.seq).toBeGreaterThan(guestState.seq);
     expect(after.originId).toBe(created.selfId);
     expect(after.eventId).toBe('host-evt-1');
 
@@ -129,6 +138,36 @@ describe('room lifecycle over sockets', () => {
     const ended = once<void>(host, 'room:ended');
     host.emit('room:end');
     await ended;
+  });
+
+  it('lets any member remove another member but protects the host', async () => {
+    const host = client();
+    const g1 = client();
+    const g2 = client();
+
+    const created = await join(host, {
+      code: 'kick-room',
+      name: 'Host',
+      key: 'kick-host-01',
+      create: true,
+    });
+    const g1Join = await join(g1, { code: 'kick-room', name: 'G1', key: 'kick-g1-0001' });
+    const g2Join = await join(g2, { code: 'kick-room', name: 'G2', key: 'kick-g2-0001' });
+    expect(g1Join.ok && g2Join.ok).toBe(true);
+
+    // A non-host member removes another non-host member.
+    const g2Kicked = once<void>(g2, 'room:kicked');
+    g1.emit('room:kick', g2Join.selfId!);
+    await g2Kicked;
+
+    // A non-host member cannot remove the host.
+    let hostKicked = false;
+    (host as Socket).once('room:kicked', () => {
+      hostKicked = true;
+    });
+    g1.emit('room:kick', created.selfId!);
+    await new Promise((r) => setTimeout(r, 150));
+    expect(hostKicked).toBe(false);
   });
 
   it('enforces lock and duplicate keys', async () => {

@@ -16,6 +16,10 @@ function ParticipantRow({
   amHost: boolean;
 }) {
   const [menu, setMenu] = useState(false);
+  // Everyone can remove another member; only the host can remove the host.
+  const canRemove = !isSelf && (amHost || !p.isHost);
+  // The menu exists if there is at least one action available on this row.
+  const showMenu = !isSelf && (amHost || canRemove);
   return (
     <li className="flex items-center gap-3 rounded-xl px-2 py-2 transition-colors hover:bg-surface-overlay">
       <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-accent/15 text-sm font-semibold text-accent">
@@ -38,7 +42,7 @@ function ParticipantRow({
         </span>
       </span>
       {!p.micOn && <MicOff size={15} className="shrink-0 text-danger" aria-label="Muted" />}
-      {amHost && !isSelf && (
+      {showMenu && (
         <span className="relative">
           <button
             type="button"
@@ -51,38 +55,44 @@ function ParticipantRow({
           </button>
           {menu && (
             <span className="glass absolute right-0 top-9 z-20 flex w-44 flex-col rounded-xl p-1 shadow-xl animate-scale-in">
-              <button
-                type="button"
-                className="cursor-pointer rounded-lg px-3 py-2 text-left text-sm transition-colors hover:bg-surface-overlay"
-                onClick={() => {
-                  socket.emit('room:force-mute', p.id);
-                  setMenu(false);
-                }}
-              >
-                Mute
-              </button>
-              <button
-                type="button"
-                className="cursor-pointer rounded-lg px-3 py-2 text-left text-sm transition-colors hover:bg-surface-overlay"
-                onClick={() => {
-                  socket.emit('room:transfer-host', p.id);
-                  setMenu(false);
-                }}
-              >
-                Make host
-              </button>
-              <button
-                type="button"
-                className="cursor-pointer rounded-lg px-3 py-2 text-left text-sm text-danger transition-colors hover:bg-danger/10"
-                onClick={() => {
-                  socket.emit('room:kick', p.id);
-                  setMenu(false);
-                }}
-              >
-                <span className="flex items-center gap-2">
-                  <UserX size={14} /> Remove
-                </span>
-              </button>
+              {amHost && (
+                <button
+                  type="button"
+                  className="cursor-pointer rounded-lg px-3 py-2 text-left text-sm transition-colors hover:bg-surface-overlay"
+                  onClick={() => {
+                    socket.emit('room:force-mute', p.id);
+                    setMenu(false);
+                  }}
+                >
+                  Mute
+                </button>
+              )}
+              {amHost && (
+                <button
+                  type="button"
+                  className="cursor-pointer rounded-lg px-3 py-2 text-left text-sm transition-colors hover:bg-surface-overlay"
+                  onClick={() => {
+                    socket.emit('room:transfer-host', p.id);
+                    setMenu(false);
+                  }}
+                >
+                  Make host
+                </button>
+              )}
+              {canRemove && (
+                <button
+                  type="button"
+                  className="cursor-pointer rounded-lg px-3 py-2 text-left text-sm text-danger transition-colors hover:bg-danger/10"
+                  onClick={() => {
+                    socket.emit('room:kick', p.id);
+                    setMenu(false);
+                  }}
+                >
+                  <span className="flex items-center gap-2">
+                    <UserX size={14} /> Remove
+                  </span>
+                </button>
+              )}
             </span>
           )}
         </span>

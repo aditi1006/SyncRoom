@@ -28,7 +28,11 @@ export class Html5Adapter implements PlayerAdapter {
     video.className = 'h-full w-full bg-black';
     video.controls = controls;
     video.playsInline = true;
-    video.crossOrigin = 'anonymous';
+    // NB: no `crossOrigin` — media elements can play cross-origin sources
+    // without CORS headers, and Google Drive (plus many direct-file hosts)
+    // don't send them. Requesting anonymous CORS made those loads fail and
+    // forced Drive into the unsynced iframe fallback. We never read pixels
+    // from this element, so anonymous CORS buys us nothing here.
     video.preload = 'auto';
     container.replaceChildren(video);
     this.video = video;

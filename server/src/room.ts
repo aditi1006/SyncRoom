@@ -28,7 +28,10 @@ export class Room {
   readonly code: string;
   readonly createdAt: number;
   locked = false;
-  controlMode: ControlMode = 'host-only';
+  // Shared control by default: everyone can play/pause/seek and use the
+  // watch-together controls. The host can restrict this to host-only via
+  // the "Shared controls" switch.
+  controlMode: ControlMode = 'everyone';
   hostId: string;
   members = new Map<string, Member>();
   chat: ChatMessage[] = [];

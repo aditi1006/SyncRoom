@@ -1,10 +1,16 @@
 import { useEffect } from 'react';
+import { RotateCcw } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
+import { Button } from '@/components/ui/Button';
 import { Select } from '@/components/ui/Select';
 import { Switch } from '@/components/ui/Switch';
 import { useMediaDevices } from '@/features/call/useMediaDevices';
 import { SHORTCUT_HELP } from '@/hooks/useKeyboardShortcuts';
 import { useSettings, type QualityPreset, type ThemeMode } from '@/store/settings';
+
+/** Output-device selection is only possible where the browser exposes setSinkId. */
+const CAN_SET_SINK =
+  typeof HTMLMediaElement !== 'undefined' && 'setSinkId' in HTMLMediaElement.prototype;
 
 export interface SettingsModalProps {
   open: boolean;
@@ -43,6 +49,12 @@ export function SettingsModal({ open, onClose, onDeviceChange }: SettingsModalPr
               { value: 'system', label: 'Follow system' },
             ]}
           />
+          <Switch
+            checked={settings.reduceMotion}
+            onChange={(v) => settings.update({ reduceMotion: v })}
+            label="Reduce motion"
+            description="Turn off animations and transitions"
+          />
 
           <h3 className="mt-2 text-xs font-semibold uppercase tracking-wide text-ink-faint">
             Devices
@@ -70,7 +82,13 @@ export function SettingsModal({ open, onClose, onDeviceChange }: SettingsModalPr
             value={settings.speakerId ?? ''}
             onChange={(e) => settings.update({ speakerId: e.target.value || null })}
             options={deviceOptions(speakers, 'Speaker')}
+            disabled={!CAN_SET_SINK}
           />
+          {!CAN_SET_SINK && (
+            <p className="-mt-2 text-xs text-ink-faint">
+              This browser can’t switch audio output — it uses your system default.
+            </p>
+          )}
 
           <h3 className="mt-2 text-xs font-semibold uppercase tracking-wide text-ink-faint">
             Video quality
@@ -119,6 +137,34 @@ export function SettingsModal({ open, onClose, onDeviceChange }: SettingsModalPr
           />
 
           <h3 className="mb-2 mt-4 text-xs font-semibold uppercase tracking-wide text-ink-faint">
+            Call preferences
+          </h3>
+          <Switch
+            checked={settings.mirrorVideo}
+            onChange={(v) => settings.update({ mirrorVideo: v })}
+            label="Mirror my video"
+            description="Flip your own self-view like a mirror (only you see this)"
+          />
+          <Switch
+            checked={settings.startMicOff}
+            onChange={(v) => settings.update({ startMicOff: v })}
+            label="Join with microphone off"
+            description="Start muted every time you enter a room"
+          />
+          <Switch
+            checked={settings.startCameraOff}
+            onChange={(v) => settings.update({ startCameraOff: v })}
+            label="Join with camera off"
+            description="Start with your camera turned off"
+          />
+          <Switch
+            checked={settings.showStats}
+            onChange={(v) => settings.update({ showStats: v })}
+            label="Show connection stats"
+            description="Display link quality and bitrate indicators"
+          />
+
+          <h3 className="mb-2 mt-4 text-xs font-semibold uppercase tracking-wide text-ink-faint">
             Notifications
           </h3>
           <Switch
@@ -147,6 +193,13 @@ export function SettingsModal({ open, onClose, onDeviceChange }: SettingsModalPr
             ))}
           </ul>
         </section>
+      </div>
+
+      <div className="mt-5 flex items-center justify-between gap-3 border-t border-line pt-4">
+        <p className="text-xs text-ink-faint">Settings are saved on this device.</p>
+        <Button variant="secondary" size="sm" onClick={() => settings.reset()}>
+          <RotateCcw size={14} /> Reset to defaults
+        </Button>
       </div>
     </Modal>
   );

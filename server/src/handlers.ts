@@ -227,10 +227,16 @@ export function registerHandlers(
 
     socket.on('room:kick', (participantId) => {
       if (!guard('generic')) return;
-      const ctx = asHost();
-      if (!ctx || participantId === ctx.id) return;
-      const target = ctx.room.members.get(String(participantId));
+      // Any member may remove another member. Guards: you can't remove
+      // yourself, and only the host may remove the host (so a guest can't
+      // depose the host — use "Make host" to transfer that role first).
+      const ctx = self();
+      if (!ctx) return;
+      const targetId = String(participantId);
+      if (targetId === ctx.id) return;
+      const target = ctx.room.members.get(targetId);
       if (!target) return;
+      if (ctx.room.isHost(targetId) && !ctx.room.isHost(ctx.id)) return;
       if (target.socketId) {
         const targetSocket = io.sockets.sockets.get(target.socketId);
         if (targetSocket) {

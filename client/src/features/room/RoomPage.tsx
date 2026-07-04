@@ -6,6 +6,7 @@ import { socket, serverNow, startClockSync, stopClockSync } from '@/lib/socket';
 import { wireSocketToStore } from '@/lib/wireSocket';
 import { getParticipantKey, saveName } from '@/lib/session';
 import { useRoomStore } from '@/store/room';
+import { useSettings } from '@/store/settings';
 import { useLocalMedia } from '@/features/call/useLocalMedia';
 import { usePeerConnections } from '@/features/call/usePeerConnections';
 import { useCallStats } from '@/features/call/useCallStats';
@@ -76,6 +77,13 @@ export function RoomPage() {
 
   const pageRef = useRef<HTMLDivElement>(null);
   const { isFullscreen, toggle: toggleFullscreen } = useFullscreen(pageRef);
+
+  /* Honor the "join with mic/camera off" preferences before the lobby
+     preview and the join handshake read these flags. Runs once per mount. */
+  useEffect(() => {
+    const s = useSettings.getState();
+    useRoomStore.getState().setMedia({ micOn: !s.startMicOff, cameraOn: !s.startCameraOff });
+  }, []);
 
   /* Connect socket + listeners for the lifetime of this page. */
   useEffect(() => {

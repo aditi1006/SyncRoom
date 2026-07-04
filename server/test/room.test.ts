@@ -44,14 +44,17 @@ describe('Room membership', () => {
 });
 
 describe('Room playback control', () => {
-  it('host-only mode blocks guests, everyone mode allows them', () => {
+  it('shared control is the default; host-only blocks guests', () => {
     const room = new Room('test-room');
     const host = room.addMember('Alice', 'ka-000001', 's1');
     const guest = room.addMember('Bob', 'kb-000001', 's2');
+    // Default is shared control: everyone can drive playback.
+    expect(room.canControlPlayback(host.participant.id)).toBe(true);
+    expect(room.canControlPlayback(guest.participant.id)).toBe(true);
+    // Host can restrict control back to host-only.
+    room.controlMode = 'host-only';
     expect(room.canControlPlayback(host.participant.id)).toBe(true);
     expect(room.canControlPlayback(guest.participant.id)).toBe(false);
-    room.controlMode = 'everyone';
-    expect(room.canControlPlayback(guest.participant.id)).toBe(true);
   });
 
   it('setMedia parses URLs and resets playback state', () => {

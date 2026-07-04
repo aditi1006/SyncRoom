@@ -91,6 +91,17 @@ body {
   }
 }
 
+/* Opt-in reduce-motion from Settings — mirrors the media query above so users
+   can disable animations even when the OS setting is off. */
+.reduce-motion *,
+.reduce-motion *::before,
+.reduce-motion *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
+}
+
 /* Video tiles mirror the local camera like every meeting product. */
 .mirror {
   transform: scaleX(-1);

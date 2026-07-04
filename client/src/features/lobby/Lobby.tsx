@@ -86,7 +86,11 @@ export function Lobby({
             autoPlay
             playsInline
             muted
-            className={cn('mirror h-full w-full object-cover', !cameraOn && 'invisible')}
+            className={cn(
+              'h-full w-full object-cover',
+              settings.mirrorVideo && 'mirror',
+              !cameraOn && 'invisible',
+            )}
           />
           {!cameraOn && (
             <div className="absolute inset-0 flex items-center justify-center text-ink-faint">
