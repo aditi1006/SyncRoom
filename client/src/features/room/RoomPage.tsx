@@ -15,6 +15,7 @@ import { useFullscreen } from '@/hooks/useFullscreen';
 import { Lobby } from '@/features/lobby/Lobby';
 import { TopBar } from './TopBar';
 import { VideoGrid } from './VideoGrid';
+import { FloatingThumbs } from './FloatingThumbs';
 import { ControlBar } from './ControlBar';
 import { ParticipantsPanel } from './ParticipantsPanel';
 import { ChatPanel } from '@/features/chat/ChatPanel';
@@ -76,8 +77,28 @@ export function RoomPage() {
   });
   const stats = useCallStats(peersRef, joined);
 
+  /* Two fullscreen targets: the media stage (cinema mode — keeps thumbnails,
+     chat overlays and the floating bar inside) when media is active, the
+     whole page otherwise. Both are strictly local. */
   const pageRef = useRef<HTMLDivElement>(null);
-  const { isFullscreen, toggle: toggleFullscreen } = useFullscreen(pageRef);
+  const stageRef = useRef<HTMLDivElement>(null);
+  const pageFs = useFullscreen(pageRef);
+  const stageFs = useFullscreen(stageRef);
+  const stageFsExit = stageFs.exit;
+  const stageFsToggle = stageFs.toggle;
+  const pageFsToggle = pageFs.toggle;
+  const pageFsExit = pageFs.exit;
+
+  const isFullscreen = stageFs.isFullscreen || pageFs.isFullscreen;
+  const toggleFullscreen = useCallback((): void => {
+    if (useRoomStore.getState().syncState?.media) stageFsToggle();
+    else pageFsToggle();
+  }, [stageFsToggle, pageFsToggle]);
+
+  /* Media cleared (or room ended) while in cinema fullscreen → leave it. */
+  useEffect(() => {
+    if (!hasMedia && stageFs.isFullscreen) stageFsExit();
+  }, [hasMedia, stageFs.isFullscreen, stageFsExit]);
 
   /* Honor the "join with mic/camera off" preferences before the lobby
      preview and the join handshake read these flags. Runs once per mount. */
@@ -224,11 +245,13 @@ export function RoomPage() {
   }, [screenStream, stopShare, setMedia]);
 
   const leave = useCallback((): void => {
+    stageFsExit();
+    pageFsExit();
     stopShare();
     local.stop();
     sessionStorage.removeItem(IN_ROOM_KEY);
     navigate('/');
-  }, [stopShare, local, navigate]);
+  }, [stopShare, local, navigate, stageFsExit, pageFsExit]);
 
   /* Space toggles synced playback for controllers. */
   const togglePlayback = useCallback((): void => {
@@ -300,7 +323,20 @@ export function RoomPage() {
           {hasMedia ? (
             <div className="flex h-full min-h-0 flex-col gap-2 lg:flex-row">
               <div className="min-h-0 flex-1">
-                <PlayerStage />
+                <PlayerStage
+                  fsRef={stageRef}
+                  isFullscreen={stageFs.isFullscreen}
+                  onToggleFullscreen={stageFsToggle}
+                  onLeave={leave}
+                  thumbs={
+                    <FloatingThumbs
+                      localStream={local.stream}
+                      screenStream={screenStream}
+                      feeds={feeds}
+                      stats={stats}
+                    />
+                  }
+                />
               </div>
               <div className="h-28 shrink-0 lg:h-auto lg:w-52">
                 <VideoGrid
@@ -322,7 +358,9 @@ export function RoomPage() {
           )}
         </main>
 
-        {panel && (
+        {/* In cinema fullscreen the stage renders its own overlays; skip the
+            page-level panel so components (and their effects) aren't doubled. */}
+        {panel && !stageFs.isFullscreen && (
           <aside
             className="glass fixed inset-x-2 bottom-24 top-16 z-30 flex flex-col overflow-hidden rounded-2xl shadow-2xl animate-slide-in-right sm:static sm:inset-auto sm:z-auto sm:w-80 sm:shrink-0"
             aria-label={panelTitle}

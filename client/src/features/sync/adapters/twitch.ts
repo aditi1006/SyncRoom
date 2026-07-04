@@ -10,6 +10,10 @@ interface TwitchPlayerInstance {
   getDuration(): number;
   isPaused(): boolean;
   getEnded(): boolean;
+  setVolume(volume: number): void; // 0..1
+  getVolume(): number;
+  setMuted(muted: boolean): void;
+  getMuted(): boolean;
   addEventListener(event: string, cb: () => void): void;
   destroy?: () => void;
 }
@@ -150,6 +154,38 @@ export class TwitchAdapter implements PlayerAdapter {
   }
   canSetRate(): boolean {
     return false;
+  }
+  setVolume(volume: number): void {
+    try {
+      this.player?.setVolume(Math.min(1, Math.max(0, volume)));
+    } catch {
+      /* player not ready yet — ignore */
+    }
+  }
+  getVolume(): number {
+    try {
+      return this.player?.getVolume() ?? 1;
+    } catch {
+      return 1;
+    }
+  }
+  setMuted(muted: boolean): void {
+    try {
+      this.player?.setMuted(muted);
+    } catch {
+      /* player not ready yet — ignore */
+    }
+  }
+  isMuted(): boolean {
+    try {
+      return this.player?.getMuted() ?? false;
+    } catch {
+      return false;
+    }
+  }
+  setNativeControls(_visible: boolean): void {
+    // The Twitch embed only accepts control options at construction; there is
+    // no runtime API to toggle its chrome, so this is a no-op.
   }
   getState(): PlaybackState {
     if (!this.ready || !this.player) return 'unstarted';

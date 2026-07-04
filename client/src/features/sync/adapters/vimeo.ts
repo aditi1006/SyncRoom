@@ -35,6 +35,8 @@ export class VimeoAdapter implements PlayerAdapter {
   private paused = true;
   private ended = false;
   private buffering = false;
+  private volume = 1;
+  private muted = false;
 
   async load(item: MediaItem, container: HTMLElement, controls: boolean): Promise<void> {
     const { default: Player } = await import('@vimeo/player');
@@ -150,6 +152,28 @@ export class VimeoAdapter implements PlayerAdapter {
   }
   canSetRate(): boolean {
     return true;
+  }
+  setVolume(volume: number): void {
+    this.volume = Math.min(1, Math.max(0, volume));
+    void this.player?.setVolume(this.volume).catch(() => {
+      /* volume control unavailable (e.g. iOS) — ignore */
+    });
+  }
+  getVolume(): number {
+    return this.volume;
+  }
+  setMuted(muted: boolean): void {
+    this.muted = muted;
+    void this.player?.setMuted(muted).catch(() => {
+      /* mute unavailable — ignore */
+    });
+  }
+  isMuted(): boolean {
+    return this.muted;
+  }
+  setNativeControls(_visible: boolean): void {
+    // Vimeo only accepts `controls` at construction; toggling would reload the
+    // player and interrupt playback, so the SDK's chrome is left as-is.
   }
   getState(): PlaybackState {
     if (!this.ready) return 'unstarted';
