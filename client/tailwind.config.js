@@ -26,6 +26,7 @@ export default {
       },
       fontFamily: {
         sans: ['Inter', 'system-ui', '-apple-system', 'Segoe UI', 'sans-serif'],
+        display: ['Fraunces', 'Georgia', 'Cambria', 'Times New Roman', 'serif'],
       },
       animation: {
         'fade-in': 'fade-in 200ms ease-out',

@@ -59,28 +59,32 @@ export function HomePage() {
 
   return (
     <div className="relative min-h-dvh overflow-hidden">
-      {/* Ambient glow */}
+      {/* Soft, off-center cobalt washes, subtle rather than a centered neon blob. */}
       <div
         aria-hidden
-        className="pointer-events-none absolute -top-48 left-1/2 h-96 w-[48rem] -translate-x-1/2 rounded-full bg-accent/20 blur-3xl"
+        className="pointer-events-none absolute -top-40 right-[-8rem] h-80 w-[42rem] rounded-full bg-accent/[0.1] blur-3xl"
+      />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -bottom-56 left-[-10rem] h-80 w-[40rem] rounded-full bg-accent/[0.06] blur-3xl"
       />
 
       <header className="relative z-10 mx-auto flex max-w-6xl items-center justify-between px-6 py-5">
-        <span className="flex items-center gap-2 text-lg font-bold">
-          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-accent text-white">
-            <Logo size={18} title="" />
+        <span className="flex items-center gap-2.5">
+          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-accent text-white">
+            <Logo size={20} title="" />
           </span>
-          Havnn
+          <span className="font-display text-xl font-semibold tracking-tight">Havnn</span>
         </span>
         <ThemeToggle />
       </header>
 
       <main className="relative z-10 mx-auto max-w-6xl px-6 pb-16">
         <section className="mx-auto max-w-2xl pt-10 text-center sm:pt-20">
-          <h1 className="animate-slide-up text-4xl font-bold leading-tight tracking-tight sm:text-6xl">
-            Meet, share and <span className="text-accent">watch together</span>
+          <h1 className="animate-slide-up font-display text-5xl font-medium leading-[1.05] tracking-tight sm:text-7xl">
+            Meet, share and <span className="italic text-accent">watch together</span>
           </h1>
-          <p className="mx-auto mt-4 max-w-lg animate-slide-up text-base text-ink-dim sm:text-lg">
+          <p className="mx-auto mt-5 max-w-lg animate-slide-up text-base leading-relaxed text-ink-dim sm:text-lg">
             High-fidelity video calls with perfectly synchronized playback. Create a room, share the
             code, press play.
           </p>
