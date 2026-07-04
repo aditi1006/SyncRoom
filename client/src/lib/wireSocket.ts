@@ -49,7 +49,7 @@ export function wireSocketToStore(): void {
 
   socket.on('disconnect', (reason) => {
     if (reason !== 'io client disconnect') {
-      store.getState().toast('info', 'Connection lost — reconnecting…');
+      store.getState().toast('info', 'Connection lost, reconnecting…');
     }
   });
 }

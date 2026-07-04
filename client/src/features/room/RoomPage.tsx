@@ -34,7 +34,7 @@ const JOIN_ERRORS: Record<JoinErrorReason, string> = {
   'invalid-name': 'That name is not valid.',
   duplicate: 'You are already in this room in another tab.',
   'room-exists':
-    'A room with this code already exists — joining it instead requires the plain link.',
+    'A room with this code already exists, joining it instead requires the plain link.',
   'rate-limited': 'Too many attempts. Wait a moment and try again.',
   'room-full': 'This room is full (8 participants max).',
 };
@@ -77,7 +77,7 @@ export function RoomPage() {
   });
   const stats = useCallStats(peersRef, joined);
 
-  /* Two fullscreen targets: the media stage (cinema mode — keeps thumbnails,
+  /* Two fullscreen targets: the media stage (cinema mode, keeps thumbnails,
      chat overlays and the floating bar inside) when media is active, the
      whole page otherwise. Both are strictly local. */
   const pageRef = useRef<HTMLDivElement>(null);
@@ -174,7 +174,7 @@ export function RoomPage() {
   }, [code]);
 
   /* Mirror mic/cam flags into tracks + presence.
-     Presence is emitted only when a flag actually transitions — never as a
+     Presence is emitted only when a flag actually transitions, never as a
      side effect of unrelated re-renders (that once caused an emit/broadcast
      feedback loop and rate-limit toast spam). */
   const sentPresence = useRef<{

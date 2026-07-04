@@ -3,7 +3,7 @@ export const LIMITS = {
   /** P2P mesh stays high quality up to this many participants. */
   MAX_PARTICIPANTS: 8,
   MAX_CHAT_LENGTH: 4000,
-  /** Attachment cap (bytes) — relayed through the socket, never stored. */
+  /** Attachment cap (bytes), relayed through the socket, never stored. */
   MAX_ATTACHMENT_BYTES: 10 * 1024 * 1024,
   MAX_QUEUE_ITEMS: 50,
   MAX_CHAT_HISTORY: 500,

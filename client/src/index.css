@@ -2,7 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Design tokens — dark is the primary theme (cinematic), light fully supported. */
+/* Design tokens, dark is the primary theme (cinematic), light fully supported. */
 :root {
   --surface: 248 250 252; /* slate-50 */
   --surface-raised: 255 255 255;
@@ -91,7 +91,7 @@ body {
   }
 }
 
-/* Opt-in reduce-motion from Settings — mirrors the media query above so users
+/* Opt-in reduce-motion from Settings, mirrors the media query above so users
    can disable animations even when the OS setting is off. */
 .reduce-motion *,
 .reduce-motion *::before,

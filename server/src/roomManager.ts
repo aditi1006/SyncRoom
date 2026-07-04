@@ -3,7 +3,7 @@ import { Room } from './room';
 
 /**
  * Registry of live rooms. Rooms are created on demand and reaped once empty
- * for `ROOM_TTL_EMPTY_MS` — the whole platform is stateless by design.
+ * for `ROOM_TTL_EMPTY_MS`, the whole platform is stateless by design.
  */
 export class RoomManager {
   private rooms = new Map<string, Room>();

@@ -5,7 +5,7 @@
  */
 
 export interface Participant {
-  /** Stable participant id — survives socket reconnects within a session. */
+  /** Stable participant id, survives socket reconnects within a session. */
   id: string;
   name: string;
   isHost: boolean;
@@ -78,7 +78,7 @@ export interface ChatAttachment {
   name: string;
   size: number;
   mimeType: string;
-  /** data: URL — attachments are relayed in-memory, never persisted. */
+  /** data: URL, attachments are relayed in-memory, never persisted. */
   dataUrl: string;
 }
 

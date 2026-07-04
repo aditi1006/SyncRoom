@@ -7,7 +7,7 @@ import type { ReadableStream as NodeWebReadableStream } from 'node:stream/web';
  *
  * Google blocks hotlinking a shared Drive file straight into a <video> element
  * (virus-scan interstitial, no CORS, unreliable Range support), which forced
- * SyncRoom into Drive's API-less preview iframe — where playback can't be
+ * SyncRoom into Drive's API-less preview iframe, where playback can't be
  * synchronized. This endpoint fetches the public file server-side (resolving
  * the confirm-token interstitial for large files) and streams the bytes back
  * to the client with Range support. The <video> then plays a same-origin,
@@ -59,7 +59,7 @@ async function fetchDrive(
   const ct = first.headers.get('content-type') ?? '';
   if (!ct.includes('text/html')) return first;
 
-  // Large-file virus-scan interstitial — resubmit the form it returned
+  // Large-file virus-scan interstitial, resubmit the form it returned
   // (carries the per-file confirm token + uuid) to get the actual bytes.
   const params = parseConfirmForm(await first.text());
   if (!params) return first;
@@ -89,7 +89,7 @@ export async function driveProxy(req: Request, res: Response): Promise<void> {
   const ct = upstream.headers.get('content-type') ?? '';
   if (!upstream.ok && upstream.status !== 206) {
     res.status(upstream.status === 404 ? 404 : 403).json({
-      error: 'This Drive file is not accessible — is it shared “Anyone with the link”?',
+      error: 'This Drive file is not accessible, is it shared “Anyone with the link”?',
     });
     return;
   }

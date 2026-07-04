@@ -209,7 +209,7 @@ export function usePeerConnections(options: {
     [selfId, streamMeta, removeFeedsFor],
   );
 
-  /** Incoming signaling — one listener for all peers. */
+  /** Incoming signaling, one listener for all peers. */
   useEffect(() => {
     if (!active) return;
 

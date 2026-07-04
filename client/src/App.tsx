@@ -4,7 +4,7 @@ import { Loader2 } from 'lucide-react';
 import { useTheme } from '@/hooks/useTheme';
 import { HomePage } from '@/features/home/HomePage';
 
-/* The room (WebRTC, players, panels) is by far the heaviest route — split it. */
+/* The room (WebRTC, players, panels) is by far the heaviest route, split it. */
 const RoomPage = lazy(() =>
   import('@/features/room/RoomPage').then((m) => ({ default: m.RoomPage })),
 );

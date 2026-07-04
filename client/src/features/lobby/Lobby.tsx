@@ -12,8 +12,8 @@ import { cn } from '@/lib/utils';
 
 const MEDIA_ERROR_TEXT: Record<string, string> = {
   denied: 'Camera/microphone permission denied. You can still join and listen.',
-  'not-found': 'No camera found — joining with microphone only.',
-  'in-use': 'Your camera is in use by another app — joining with microphone only.',
+  'not-found': 'No camera found, joining with microphone only.',
+  'in-use': 'Your camera is in use by another app, joining with microphone only.',
   unknown: 'Could not start your devices. You can still join.',
 };
 

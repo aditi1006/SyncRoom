@@ -42,7 +42,7 @@ describe('parseMediaUrl', () => {
   });
 });
 
-describe('classifyMediaUrl — Drive URL coverage', () => {
+describe('classifyMediaUrl, Drive URL coverage', () => {
   const ID = '1a2B3c4D5e6F7g8H9';
   const shapes = [
     `https://drive.google.com/file/d/${ID}/view?usp=sharing`,
@@ -70,7 +70,7 @@ describe('classifyMediaUrl — Drive URL coverage', () => {
   });
 });
 
-describe('classifyMediaUrl — Vimeo', () => {
+describe('classifyMediaUrl, Vimeo', () => {
   it('parses standard, unlisted and player Vimeo URLs', () => {
     expect(parseMediaUrl('https://vimeo.com/123456789')?.kind).toBe('vimeo');
     expect(parseMediaUrl('https://vimeo.com/123456789')?.providerId).toBe('123456789');
@@ -96,7 +96,7 @@ describe('classifyMediaUrl — Vimeo', () => {
   });
 });
 
-describe('classifyMediaUrl — Twitch', () => {
+describe('classifyMediaUrl, Twitch', () => {
   it('detects VODs, channels and the player embed', () => {
     const vod = classifyMediaUrl('https://www.twitch.tv/videos/123456789');
     expect(vod.ok && vod.media.kind).toBe('twitch');
@@ -121,7 +121,7 @@ describe('classifyMediaUrl — Twitch', () => {
   });
 });
 
-describe('classifyMediaUrl — DRM streaming services', () => {
+describe('classifyMediaUrl, DRM streaming services', () => {
   it('rejects Netflix, Prime Video and Disney+ with a clear reason', () => {
     for (const link of [
       'https://www.netflix.com/watch/80100172',
@@ -133,7 +133,7 @@ describe('classifyMediaUrl — DRM streaming services', () => {
   });
 });
 
-describe('classifyMediaUrl — specific rejections', () => {
+describe('classifyMediaUrl, specific rejections', () => {
   it('explains YouTube links without a video', () => {
     expect(classifyMediaUrl('https://www.youtube.com/playlist?list=PL123abc')).toEqual({
       ok: false,

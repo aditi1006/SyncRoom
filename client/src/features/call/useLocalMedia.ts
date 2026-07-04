@@ -150,7 +150,7 @@ export function useLocalMedia(): LocalMedia {
   useEffect(() => stop, [stop]);
 
   // Memoized: a stable object identity means effects depending on `local`
-  // only re-run when something real changed — an unstable identity here once
+  // only re-run when something real changed, an unstable identity here once
   // caused a presence-update/broadcast/render feedback loop.
   return useMemo(
     () => ({ stream, error, acquire, switchCamera, switchMicrophone, setTrackEnabled, stop }),

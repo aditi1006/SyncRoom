@@ -7,7 +7,7 @@ import { SyncController, type ControllerPhase } from './SyncController';
  * Thin React binding for the SyncController state machine.
  *
  * - Creates one controller per (media item, control-rights) combination and
- *   disposes it fully on change — provider switches (YouTube → Drive → MP4)
+ *   disposes it fully on change, provider switches (YouTube → Drive → MP4)
  *   replace the playback session in place, no page refresh, no leaks.
  * - Feeds every authoritative `sync:state` into `applyRemote` (seq-guarded).
  * - Google Drive: when direct playback is impossible, the controller swaps
@@ -32,7 +32,7 @@ export function useSyncEngine(containerRef: RefObject<HTMLDivElement | null>): {
   playerReady: boolean;
   autoplayBlocked: boolean;
   resume: () => void;
-  /** Per-viewer controls for UI chrome (cinema bar) — never synchronized. */
+  /** Per-viewer controls for UI chrome (cinema bar), never synchronized. */
   player: LocalPlayerFacade;
 } {
   const syncState = useRoomStore((s) => s.syncState);
@@ -71,7 +71,7 @@ export function useSyncEngine(containerRef: RefObject<HTMLDivElement | null>): {
           .getState()
           .toast(
             'info',
-            'This Google Drive file can’t be synced — playing in Drive’s player, so each person controls their own playback.',
+            'This Google Drive file can’t be synced, playing in Drive’s player, so each person controls their own playback.',
             'drive-fallback',
           );
       },

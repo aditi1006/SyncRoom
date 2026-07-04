@@ -12,7 +12,7 @@ export interface VideoTileProps {
   micOn?: boolean;
   cameraOn?: boolean;
   isScreen?: boolean;
-  /** This participant chose to flip their video — shown mirrored to everyone. */
+  /** This participant chose to flip their video, shown mirrored to everyone. */
   mirrored?: boolean;
   stats?: PeerStats;
   className?: string;
@@ -56,7 +56,7 @@ export function VideoTile({
   const showVideo = stream !== null && (cameraOn || isScreen);
 
   /* Track PiP so we can hide the inline element while it is mirrored to the
-     PiP window — that suppresses the browser's big "Playing in picture-in-
+     PiP window, that suppresses the browser's big "Playing in picture-in-
      picture" placeholder text (it's painted inside the source <video>). We
      also re-assert playback across the transition: some browsers pause the
      inline element, and a MediaStream tile that isn't playing opens a paused
@@ -91,14 +91,14 @@ export function VideoTile({
         await document.exitPictureInPicture();
         return;
       }
-      // A live tile must be actively playing to enter PiP cleanly — a paused
+      // A live tile must be actively playing to enter PiP cleanly, a paused
       // element opens a paused PiP window (or throws). Start it first, then
       // keep it playing once the transition completes.
       if (el.paused) await el.play().catch(() => {});
       await el.requestPictureInPicture();
       if (el.paused) void el.play().catch(() => {});
     } catch {
-      /* PiP unsupported or blocked — non-fatal */
+      /* PiP unsupported or blocked, non-fatal */
     }
   };
 
@@ -122,7 +122,7 @@ export function VideoTile({
           !showVideo && 'invisible',
         )}
       />
-      {/* Opaque cover shown for camera-off tiles and — crucially — while the
+      {/* Opaque cover shown for camera-off tiles and, crucially, while the
           tile is in PiP. Covering (rather than hiding) the still-visible
           <video> masks the browser's big "Playing in picture-in-picture"
           text without ever detaching rendering, so closing PiP snaps back

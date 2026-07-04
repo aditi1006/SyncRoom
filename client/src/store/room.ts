@@ -11,7 +11,7 @@ export type PanelKind = 'chat' | 'people' | 'media' | null;
 
 export interface Toast {
   id: number;
-  /** Stable identity — an identical toast renews this one instead of stacking. */
+  /** Stable identity, an identical toast renews this one instead of stacking. */
   key: string;
   kind: 'info' | 'error' | 'success';
   text: string;
@@ -122,7 +122,7 @@ export const useRoomStore = create<RoomStore>((set) => ({
   clearUnread: () => set({ unreadChat: 0 }),
 
   // Deduplicated: an identical toast (same key, default = kind+text) renews
-  // the visible one — resets its timer and refreshes the text — instead of
+  // the visible one, resets its timer and refreshes the text, instead of
   // stacking. At most one identical toast can ever be on screen.
   toast: (kind, text, key) =>
     set((s) => {

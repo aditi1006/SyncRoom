@@ -66,7 +66,7 @@ export function registerHandlers(
     };
 
     /**
-     * Rate guard. Rejections are silent for the caller's traffic shape —
+     * Rate guard. Rejections are silent for the caller's traffic shape,
      * the user is told at most once per 5s so a burst of throttled events
      * can never turn into a toast storm.
      */
@@ -229,7 +229,7 @@ export function registerHandlers(
       if (!guard('generic')) return;
       // Any member may remove another member. Guards: you can't remove
       // yourself, and only the host may remove the host (so a guest can't
-      // depose the host — use "Make host" to transfer that role first).
+      // depose the host, use "Make host" to transfer that role first).
       const ctx = self();
       if (!ctx) return;
       const targetId = String(participantId);

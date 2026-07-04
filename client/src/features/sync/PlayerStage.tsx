@@ -19,7 +19,7 @@ import { DebugOverlay } from './DebugOverlay';
 const INACTIVITY_HIDE_MS = 3000;
 
 export interface PlayerStageProps {
-  /** Fullscreen target — owned by RoomPage so shortcuts/buttons can toggle it. */
+  /** Fullscreen target, owned by RoomPage so shortcuts/buttons can toggle it. */
   fsRef: RefObject<HTMLDivElement>;
   isFullscreen: boolean;
   onToggleFullscreen: () => void;
@@ -36,7 +36,7 @@ export interface PlayerStageProps {
  *   after 3s of inactivity and returns on pointer movement; the cursor hides
  *   with it. Double-click toggles fullscreen.
  * - In fullscreen, chat/participants stay reachable as overlays and webcam
- *   thumbnails float (draggable) — the meeting never stops.
+ *   thumbnails float (draggable), the meeting never stops.
  * - Fullscreen is strictly local: nothing here emits sync events, and the
  *   wrapper survives provider switches, so fullscreen persists across them.
  */
@@ -79,7 +79,7 @@ export function PlayerStage({
 
   /* The cinema bar owns the surface for HTML5 media: native controls stay
      off so double-click can't trigger the browser's video-element fullscreen
-     (which would bypass the cinema layout). YouTube keeps its own chrome —
+     (which would bypass the cinema layout). YouTube keeps its own chrome,
      the IFrame API can't toggle it without reloading. */
   useEffect(() => {
     if (playerReady) player.setNativeControls(false);
@@ -110,7 +110,7 @@ export function PlayerStage({
       {driveFallback && (
         <div className="glass z-10 flex items-center gap-2 px-4 py-2 text-xs text-warning">
           <AlertTriangle size={14} className="shrink-0" />
-          This Google Drive file can’t be synced — Drive’s own player has no controls we can drive,
+          This Google Drive file can’t be synced, Drive’s own player has no controls we can drive,
           so everyone presses play themselves. For synced playback, make sure it’s shared “Anyone
           with the link”, or use a direct MP4, YouTube or Vimeo link.
         </div>
@@ -131,7 +131,7 @@ export function PlayerStage({
           </span>
           <span className="text-sm font-medium">Click to join playback</span>
           <span className="text-xs text-white/60">
-            Your browser blocked autoplay — one click syncs you up.
+            Your browser blocked autoplay, one click syncs you up.
           </span>
         </button>
       )}
@@ -139,7 +139,7 @@ export function PlayerStage({
       <DebugOverlay />
       <div ref={containerRef} className="min-h-0 w-full flex-1" />
 
-      {/* Cinema chrome — strictly local, never emits fullscreen state. */}
+      {/* Cinema chrome, strictly local, never emits fullscreen state. */}
       {!driveFallback && (
         <CinemaBar
           player={player}

@@ -26,7 +26,7 @@ app.get('/healthz', (_req, res) => {
 // catch-all so it isn't swallowed by the index.html fallback.
 app.get('/drive/:id', driveProxy);
 
-// In production the server also serves the built SPA — one process, one port.
+// In production the server also serves the built SPA, one process, one port.
 const dirname = path.dirname(fileURLToPath(import.meta.url));
 const clientDist = path.resolve(dirname, '../../client/dist');
 if (existsSync(clientDist)) {

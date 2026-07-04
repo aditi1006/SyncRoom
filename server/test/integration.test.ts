@@ -56,7 +56,7 @@ function once<T>(c: TestClient, event: string): Promise<T> {
 beforeAll(async () => {
   httpServer = createServer();
   io = new Server(httpServer, { cors: { origin: '*' } });
-  // All test clients share one IP — use a limiter that never throttles.
+  // All test clients share one IP, use a limiter that never throttles.
   const permissive = new RateLimiter();
   permissive.allow = () => true;
   registerHandlers(io, new RoomManager(), permissive);

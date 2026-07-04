@@ -205,14 +205,14 @@ describe('echo prevention (intent ledger)', () => {
   it('emits exactly one event for a genuine user action, collapsing duplicates', () => {
     const { adapter, auth } = harness;
     auth.current = state({ playing: false, seq: 1 });
-    adapter.fire({ type: 'play', time: 10 }); // user pressed play — no intent
+    adapter.fire({ type: 'play', time: 10 }); // user pressed play, no intent
     adapter.fire({ type: 'play', time: 10 }); // double-fired player event
     const plays = syncEmits().filter((e) => e.event === 'sync:play');
     expect(plays).toHaveLength(1);
     expect((plays[0]!.payload as { eventId?: string }).eventId).toBeTruthy();
   });
 
-  it('non-controllers never emit — the player snaps back to authority', () => {
+  it('non-controllers never emit, the player snaps back to authority', () => {
     const { adapter, auth, flags } = harness;
     flags.canControl = false;
     auth.current = state({ playing: false, time: 0, seq: 1 });
@@ -297,7 +297,7 @@ describe('capability degradation', () => {
     adapter.caps = { sync: true, seek: false, rate: false };
     auth.current = state({ playing: true, time: 100, seq: 1 });
     adapter.state = 'playing';
-    adapter.time = 200; // hopelessly "drifted" — but it's live
+    adapter.time = 200; // hopelessly "drifted", but it's live
     vi.advanceTimersByTime(DRIFT_CHECK_INTERVAL_MS);
     expect(adapter.calls.filter((c) => c.startsWith('seek:'))).toHaveLength(0);
     expect(adapter.calls.filter((c) => c.startsWith('rate:'))).toHaveLength(0);
@@ -320,7 +320,7 @@ describe('local UI facade (cinema bar) never synchronizes', () => {
 });
 
 describe('autoplay handling', () => {
-  it('retries a stalled play once, then surfaces click-to-play — no retry storm', async () => {
+  it('retries a stalled play once, then surfaces click-to-play, no retry storm', async () => {
     const onAutoplayBlocked = vi.fn();
     harness.controller.dispose();
     harness = await setup({ onAutoplayBlocked });

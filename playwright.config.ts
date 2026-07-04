@@ -44,7 +44,7 @@ export default defineConfig({
       },
     },
     {
-      // Microsoft Edge — same engine, real-world channel. Skipped
+      // Microsoft Edge, same engine, real-world channel. Skipped
       // automatically on machines without Edge installed.
       name: 'msedge',
       use: {

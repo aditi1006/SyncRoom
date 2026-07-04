@@ -16,7 +16,7 @@ function apiAvailable(): boolean {
  * Cross-browser fullscreen for a target element.
  *
  * - Chrome/Edge/Firefox: native Fullscreen API (unprefixed everywhere modern).
- * - Browsers without the API (e.g. iPhone Safari): CSS pseudo-fullscreen —
+ * - Browsers without the API (e.g. iPhone Safari): CSS pseudo-fullscreen,
  *   the element is pinned inset-0 with a `pseudo-fullscreen` class and Esc
  *   is handled manually, so the cinema experience degrades gracefully.
  * - Unmounting (or the element leaving the DOM) never leaves stale state:
@@ -77,7 +77,7 @@ export function useFullscreen(target: RefObject<HTMLElement | null>): Fullscreen
       // If something else is fullscreen (another element), replace it.
       const request = (): void => {
         el.requestFullscreen({ navigationUI: 'hide' }).catch(() => {
-          // Request denied (no gesture, iframe policy…) — degrade to pseudo.
+          // Request denied (no gesture, iframe policy…), degrade to pseudo.
           pseudoRef.current = true;
           el.classList.add('pseudo-fullscreen');
           setIsPseudo(true);

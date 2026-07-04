@@ -10,7 +10,7 @@ const FEATURES = [
   {
     icon: <Video size={18} />,
     title: 'Crystal-clear calls',
-    text: 'Direct peer-to-peer video up to 4K60 — no server compression in the middle.',
+    text: 'Direct peer-to-peer video up to 4K60, no server compression in the middle.',
   },
   {
     icon: <MonitorPlay size={18} />,
@@ -25,7 +25,7 @@ const FEATURES = [
   {
     icon: <ShieldCheck size={18} />,
     title: 'Private by design',
-    text: 'Rooms are ephemeral — nothing is stored once everyone leaves.',
+    text: 'Rooms are ephemeral, nothing is stored once everyone leaves.',
   },
 ];
 

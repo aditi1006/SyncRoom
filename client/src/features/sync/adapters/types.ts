@@ -15,7 +15,7 @@ export type PlaybackState = 'unstarted' | 'playing' | 'paused' | 'buffering' | '
 /**
  * Uniform facade over every media provider (YouTube IFrame, HTML5 <video>
  * incl. hls.js/dash.js, Drive preview iframe). The SyncController drives
- * adapters purely through this interface — it never knows which provider is
+ * adapters purely through this interface, it never knows which provider is
  * behind it. Adding a provider = implementing this interface.
  *
  * Capability probes (`canSync/canSeek/canSetRate`) let the controller degrade
@@ -37,7 +37,7 @@ export interface PlayerAdapter {
   canSync(): boolean;
   canSeek(): boolean;
   canSetRate(): boolean;
-  /** Local audio control — never synchronized (each viewer owns their volume). */
+  /** Local audio control, never synchronized (each viewer owns their volume). */
   setVolume(volume: number): void; // 0..1
   getVolume(): number;
   setMuted(muted: boolean): void;

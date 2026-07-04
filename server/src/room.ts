@@ -12,7 +12,7 @@ import { LIMITS, expectedTime, parseMediaUrl } from '@syncroom/shared';
 
 export interface Member {
   participant: Participant;
-  /** Stable client key — lets a refreshed tab reclaim this identity. */
+  /** Stable client key, lets a refreshed tab reclaim this identity. */
   key: string;
   /** Live socket id, or null while inside the reconnect grace window. */
   socketId: string | null;
@@ -22,7 +22,7 @@ export interface Member {
 /**
  * A single in-memory room. The server is authoritative for membership,
  * host powers, playback sync state, the queue and bounded chat history.
- * Nothing is ever persisted — the room dies with its last participant.
+ * Nothing is ever persisted, the room dies with its last participant.
  */
 export class Room {
   readonly code: string;
@@ -38,7 +38,7 @@ export class Room {
   queue: MediaItem[] = [];
   sync: SyncState = { media: null, playing: false, time: 0, rate: 1, updatedAt: 0, seq: 0 };
 
-  /** Monotonic per-room sequence — lets clients drop stale sync states. */
+  /** Monotonic per-room sequence, lets clients drop stale sync states. */
   private seqCounter = 0;
 
   private readonly now: () => number;
@@ -128,7 +128,7 @@ export class Room {
   }
 
   /**
-   * Playback state ops — every mutation is stamped with server time, a
+   * Playback state ops, every mutation is stamped with server time, a
    * monotonic sequence number and the origin metadata. Clients use `seq`
    * to drop stale states and `originId`/`eventId` to recognize echoes of
    * their own actions.
@@ -214,7 +214,7 @@ export class Room {
     return item;
   }
 
-  /** Chat ops — history is bounded; attachments live only in this buffer. */
+  /** Chat ops, history is bounded; attachments live only in this buffer. */
 
   addChat(senderId: string, text: string, attachment?: ChatAttachment): ChatMessage | null {
     const sender = this.members.get(senderId);

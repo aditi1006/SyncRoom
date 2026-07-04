@@ -23,7 +23,7 @@ interface ErrorPayload {
  * The SDK is Promise-based, but PlayerAdapter's getters are synchronous, so we
  * mirror the player's state into plain fields updated from the SDK's events
  * (`timeupdate` fires ~4×/s). The SyncController drives this exactly like any
- * other provider — full play/pause/seek/rate sync.
+ * other provider, full play/pause/seek/rate sync.
  */
 export class VimeoAdapter implements PlayerAdapter {
   private player: VimeoPlayer | null = null;
@@ -114,7 +114,7 @@ export class VimeoAdapter implements PlayerAdapter {
   }
 
   play(): void {
-    // Vimeo's play() rejects when autoplay is blocked or interrupted — surface
+    // Vimeo's play() rejects when autoplay is blocked or interrupted, surface
     // the click-to-play overlay; genuine load failures come via the error event.
     void this.player?.play().catch(() => this.cb?.({ type: 'autoplay-blocked' }));
   }
@@ -156,7 +156,7 @@ export class VimeoAdapter implements PlayerAdapter {
   setVolume(volume: number): void {
     this.volume = Math.min(1, Math.max(0, volume));
     void this.player?.setVolume(this.volume).catch(() => {
-      /* volume control unavailable (e.g. iOS) — ignore */
+      /* volume control unavailable (e.g. iOS), ignore */
     });
   }
   getVolume(): number {
@@ -165,7 +165,7 @@ export class VimeoAdapter implements PlayerAdapter {
   setMuted(muted: boolean): void {
     this.muted = muted;
     void this.player?.setMuted(muted).catch(() => {
-      /* mute unavailable — ignore */
+      /* mute unavailable, ignore */
     });
   }
   isMuted(): boolean {

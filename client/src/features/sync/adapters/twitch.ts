@@ -59,7 +59,7 @@ let mountSeq = 0;
 /**
  * Twitch provider via the official embed player. `providerId` is encoded as
  * `video:<id>` (a seekable VOD) or `channel:<name>` (a live stream). Live
- * streams report canSeek()/canSetRate() === false — the SyncController keeps
+ * streams report canSeek()/canSetRate() === false, the SyncController keeps
  * play/pause in lock-step and simply skips seek/rate for them. Twitch exposes
  * no playback-rate control, so canSetRate() is always false.
  */
@@ -159,7 +159,7 @@ export class TwitchAdapter implements PlayerAdapter {
     try {
       this.player?.setVolume(Math.min(1, Math.max(0, volume)));
     } catch {
-      /* player not ready yet — ignore */
+      /* player not ready yet, ignore */
     }
   }
   getVolume(): number {
@@ -173,7 +173,7 @@ export class TwitchAdapter implements PlayerAdapter {
     try {
       this.player?.setMuted(muted);
     } catch {
-      /* player not ready yet — ignore */
+      /* player not ready yet, ignore */
     }
   }
   isMuted(): boolean {

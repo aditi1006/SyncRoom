@@ -13,7 +13,7 @@ export type ControllerPhase = 'loading' | 'ready' | 'error';
 
 export interface SyncControllerOptions {
   container: HTMLElement;
-  /** Live permission checks — read at event time, never captured. */
+  /** Live permission checks, read at event time, never captured. */
   canControl: () => boolean;
   isHost: () => boolean;
   /** Latest authoritative state (from the room store). */
@@ -23,7 +23,7 @@ export interface SyncControllerOptions {
   onEnded: () => void;
   /** Fired once when the provider degrades to an unsynced fallback (Drive). */
   onSyncUnavailable: () => void;
-  /** Fired when autoplay policy blocks playback — UI shows a click-to-play. */
+  /** Fired when autoplay policy blocks playback, UI shows a click-to-play. */
   onAutoplayBlocked: () => void;
   /** Test seam: overrides the provider registry. */
   adapterFactory?: (media: MediaItem) => PlayerAdapter;
@@ -53,7 +53,7 @@ const HEARTBEAT_DRIFT_S = 0.25;
 /** Drive direct streams that neither error nor become ready get this long. */
 const DRIVE_LOAD_TIMEOUT_MS = 12_000;
 
-/** Provider registry — the ONLY place that maps media kinds to adapters. */
+/** Provider registry, the ONLY place that maps media kinds to adapters. */
 function adapterFor(media: MediaItem): PlayerAdapter {
   switch (media.kind) {
     case 'youtube':
@@ -70,7 +70,7 @@ function adapterFor(media: MediaItem): PlayerAdapter {
 }
 
 /**
- * Provider-agnostic MediaController — the sync state machine.
+ * Provider-agnostic MediaController, the sync state machine.
  *
  * Invariants:
  *  1. One user action → exactly one emitted sync event (seeks debounced,
@@ -78,7 +78,7 @@ function adapterFor(media: MediaItem): PlayerAdapter {
  *  2. One received sync state → at most one adapter command per dimension,
  *     and only if that dimension actually changes (diff-based apply).
  *  3. Adapter events caused by our own commands are consumed by the intent
- *     ledger and never re-emitted — feedback loops are structurally
+ *     ledger and never re-emitted, feedback loops are structurally
  *     impossible.
  *  4. Stale/out-of-order states are dropped via the server's monotonic `seq`.
  *
@@ -103,7 +103,7 @@ export class SyncController {
   private driftTimer: ReturnType<typeof setInterval> | null = null;
   private loadTimeout: ReturnType<typeof setTimeout> | null = null;
   private lastHeartbeatAt = 0;
-  /** Consecutive stalled play attempts — beyond 1 we assume autoplay policy. */
+  /** Consecutive stalled play attempts, beyond 1 we assume autoplay policy. */
   private stalledPlays = 0;
   private fellBack = false;
 
@@ -125,7 +125,7 @@ export class SyncController {
     adapter.onEvent((ev) => this.onPlayerEvent(ev));
 
     // Drive direct streams sometimes hang without ever erroring (interstitial
-    // page, quota) — degrade to the preview iframe instead of spinning forever.
+    // page, quota), degrade to the preview iframe instead of spinning forever.
     if (media.kind === 'drive') {
       this.loadTimeout = setTimeout(() => {
         if (!this.disposed && !adapter.isReady()) this.fallbackToDriveEmbed();
@@ -151,7 +151,7 @@ export class SyncController {
 
   /**
    * Swaps the failed direct-stream adapter for the unsynced Drive preview
-   * iframe. Same interface, same container — the rest of the app only sees
+   * iframe. Same interface, same container, the rest of the app only sees
    * `canSync() === false`.
    */
   private fallbackToDriveEmbed(): void {
@@ -169,7 +169,7 @@ export class SyncController {
   }
 
   /* ------------------------------------------------------------------ */
-  /* Local UI facade — powers the cinema bar. Everything here is         */
+  /* Local UI facade, powers the cinema bar. Everything here is         */
   /* per-viewer (volume, playhead readout, chrome); nothing emits.       */
   /* ------------------------------------------------------------------ */
 
@@ -196,7 +196,7 @@ export class SyncController {
     this.adapter?.setNativeControls(visible);
   }
 
-  /** User clicked the "click to play" overlay — a gesture is now available. */
+  /** User clicked the "click to play" overlay, a gesture is now available. */
   resume(): void {
     this.stalledPlays = 0;
     const state = this.opts.authoritative();
@@ -250,7 +250,7 @@ export class SyncController {
     const a = this.adapter;
     if (!a?.isReady() || !state.media || !a.canSync()) return;
 
-    // 1. Rate — skip while a drift nudge is deliberately off-rate.
+    // 1. Rate, skip while a drift nudge is deliberately off-rate.
     if (a.canSetRate() && !this.nudging && Math.abs(a.getPlaybackRate() - state.rate) > 0.001) {
       this.intend('rate', state.rate);
       a.setPlaybackRate(state.rate);
@@ -263,7 +263,7 @@ export class SyncController {
       a.seek(target);
     }
 
-    // 3. Play/pause — only when the actual player state differs.
+    // 3. Play/pause, only when the actual player state differs.
     const ps = a.getState();
     if (state.playing) {
       if (ps !== 'playing' && ps !== 'buffering') {
@@ -326,7 +326,7 @@ export class SyncController {
         break;
     }
 
-    // Playback resumed — clear the autoplay stall counter.
+    // Playback resumed, clear the autoplay stall counter.
     if (ev.type === 'play') this.stalledPlays = 0;
 
     // Echo of one of our own commands? Consume it, never re-broadcast.
@@ -334,7 +334,7 @@ export class SyncController {
 
     if (!this.opts.canControl()) {
       // A non-controller managed to move the player (e.g. keyboard on the
-      // iframe) — snap back to authority instead of emitting anything.
+      // iframe), snap back to authority instead of emitting anything.
       this.reassert();
       return;
     }
@@ -427,7 +427,7 @@ export class SyncController {
 
     // Autoplay stall: authority says playing but the player never started.
     // One retry (some players need a nudge after load), then surface the
-    // click-to-play overlay — never a retry storm.
+    // click-to-play overlay, never a retry storm.
     if (ps === 'paused' || ps === 'unstarted') {
       this.stalledPlays += 1;
       if (this.stalledPlays === 1) {
@@ -445,7 +445,7 @@ export class SyncController {
 
     if (this.opts.isHost()) {
       // The host IS the truth: never self-correct; instead re-anchor server
-      // authority when the player position diverged (e.g. after buffering) —
+      // authority when the player position diverged (e.g. after buffering),
       // at most once per heartbeat interval, and only if actually needed.
       const now = Date.now();
       if (
@@ -461,7 +461,7 @@ export class SyncController {
 
     const action = correctionFor(a.getCurrentTime(), target, state.rate);
     if (action.type === 'seek') {
-      if (!a.canSeek()) return; // live edge — nothing sensible to do
+      if (!a.canSeek()) return; // live edge, nothing sensible to do
       this.intend('seek', action.to);
       a.seek(action.to);
       if (this.nudging) {

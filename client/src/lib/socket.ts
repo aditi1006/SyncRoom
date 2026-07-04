@@ -19,7 +19,7 @@ export const socket: AppSocket = io(serverUrl ?? '/', {
   reconnectionDelayMax: 5000,
 });
 
-/** Client↔server clock offset estimator — the sync engine depends on it. */
+/** Client↔server clock offset estimator, the sync engine depends on it. */
 export const clock = new ClockSync();
 
 export function serverNow(): number {

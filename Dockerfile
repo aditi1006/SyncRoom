@@ -1,4 +1,4 @@
-# SyncRoom — single-image full-stack build (server serves the SPA).
+# SyncRoom, single-image full-stack build (server serves the SPA).
 # Used for Fly.io, a VPS, or any container host; Render/Vercel don't need it.
 #
 #   docker build -t syncroom .

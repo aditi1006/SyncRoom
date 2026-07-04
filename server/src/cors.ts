@@ -4,7 +4,7 @@
  * `CLIENT_ORIGIN` accepts a comma-separated list. Each entry is either an
  * exact origin (`https://syncroom.vercel.app`) or a wildcard-subdomain
  * pattern (`https://*.vercel.app`) so Vercel preview deployments work
- * without reconfiguring the server. Wildcards match subdomains only —
+ * without reconfiguring the server. Wildcards match subdomains only,
  * `https://*.vercel.app` allows `https://x.vercel.app` but never
  * `https://evilvercel.app`.
  */
@@ -34,7 +34,7 @@ export function makeOriginCheck(
 ): (origin: string | undefined, cb: (err: Error | null, allow?: boolean) => void) => void {
   return (origin, cb) => {
     // No Origin header = same-origin request or non-browser client (curl,
-    // health checks) — always allowed.
+    // health checks), always allowed.
     if (!origin || isOriginAllowed(origin, allowed)) cb(null, true);
     else cb(new Error('Origin not allowed by CLIENT_ORIGIN'));
   };

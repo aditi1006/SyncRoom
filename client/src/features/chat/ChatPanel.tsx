@@ -59,13 +59,13 @@ export function ChatPanel() {
     if (unread.length > 0) {
       unread.forEach((id) => sentReads.current.add(id));
       socket.emit('chat:read', unread);
-      // Optimistic local update — the server only echoes reads to others.
+      // Optimistic local update, the server only echoes reads to others.
       useRoomStore.getState().markRead(selfId, unread);
     }
   }, [chat, selfId]);
 
   /* Typing indicator: emit only on the idle→typing transition (one event),
-     plus a single "stopped" event after 2s of silence — not per keystroke. */
+     plus a single "stopped" event after 2s of silence, not per keystroke. */
   const typingActive = useRef(false);
   useEffect(
     () => () => {
@@ -88,7 +88,7 @@ export function ChatPanel() {
   const attachFile = useCallback(
     (file: File): void => {
       if (file.size > LIMITS.MAX_ATTACHMENT_BYTES) {
-        toast('error', `File too large — max ${formatBytes(LIMITS.MAX_ATTACHMENT_BYTES)}.`);
+        toast('error', `File too large, max ${formatBytes(LIMITS.MAX_ATTACHMENT_BYTES)}.`);
         return;
       }
       setPendingFile(file);
@@ -155,7 +155,7 @@ export function ChatPanel() {
       <div ref={listRef} className="flex-1 overflow-y-auto p-4">
         {chat.length === 0 ? (
           <p className="mt-8 text-center text-sm text-ink-faint">
-            No messages yet. Say hi — or drop a file anywhere in this panel.
+            No messages yet. Say hi, or drop a file anywhere in this panel.
           </p>
         ) : (
           chat.map((m) => (

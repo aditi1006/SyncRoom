@@ -7,7 +7,7 @@ export interface ParsedMedia {
   title: string;
 }
 
-/** Why a pasted link was rejected — surfaced to the user verbatim-ish. */
+/** Why a pasted link was rejected, surfaced to the user verbatim-ish. */
 export type MediaUrlErrorReason =
   | 'invalid-url'
   | 'unsupported-protocol'
@@ -24,13 +24,13 @@ export const MEDIA_URL_ERROR_TEXT: Record<MediaUrlErrorReason, string> = {
   'invalid-url': 'That does not look like a link. Paste a full URL starting with https://',
   'unsupported-protocol': 'Only http(s) links can be played.',
   'youtube-no-video':
-    'That YouTube link has no video in it (playlists and channel pages are not supported — open the video and copy its URL).',
+    'That YouTube link has no video in it (playlists and channel pages are not supported, open the video and copy its URL).',
   'vimeo-no-video':
-    'That Vimeo link has no video in it — open the video and copy its URL (e.g. vimeo.com/123456789).',
+    'That Vimeo link has no video in it, open the video and copy its URL (e.g. vimeo.com/123456789).',
   'twitch-no-video':
     'That Twitch link is not playable here. Use a VOD (twitch.tv/videos/…) or a channel (twitch.tv/name). Clips are not supported.',
   'drive-not-a-file':
-    'That Google Drive link is not a single file (folders are not supported — right-click the video file and copy its share link).',
+    'That Google Drive link is not a single file (folders are not supported, right-click the video file and copy its share link).',
   'drm-unsupported':
     'Netflix, Prime Video, Disney+ and similar subscription services use DRM and cannot be embedded. Use that service’s own watch-party, or share your screen instead.',
 };
@@ -108,7 +108,7 @@ export function driveDirectUrl(fileId: string): string {
   return `/drive/${fileId}`;
 }
 
-/** Iframe preview URL — always renders, but exposes no playback API (no sync). */
+/** Iframe preview URL, always renders, but exposes no playback API (no sync). */
 export function driveEmbedUrl(fileId: string): string {
   return `https://drive.google.com/file/d/${fileId}/preview`;
 }
@@ -188,7 +188,7 @@ export function isTwitchHost(url: URL): boolean {
  */
 export function parseTwitch(url: URL): { kind: 'video' | 'channel'; ref: string } | null {
   if (!isTwitchHost(url)) return null;
-  // clips.twitch.tv is a distinct, non-drivable embed — never a channel/VOD.
+  // clips.twitch.tv is a distinct, non-drivable embed, never a channel/VOD.
   if (url.hostname === 'clips.twitch.tv') return null;
   if (url.hostname === 'player.twitch.tv') {
     const v = (url.searchParams.get('video') ?? '').replace(/^v/, '');
@@ -213,7 +213,7 @@ export function parseTwitch(url: URL): { kind: 'video' | 'channel'; ref: string 
 /* ---------------------- DRM / non-embeddable services ---------------------- */
 
 /**
- * Subscription streaming services that use DRM and expose no legal embed API —
+ * Subscription streaming services that use DRM and expose no legal embed API,
  * pasting one should get a clear explanation, never a mystifying playback error.
  */
 const DRM_HOSTS = [
@@ -284,7 +284,7 @@ export function classifyMediaUrl(raw: string): MediaUrlResult {
       ok: true,
       media: {
         kind: 'vimeo',
-        // Canonical URL (with the privacy hash for unlisted videos) — the
+        // Canonical URL (with the privacy hash for unlisted videos), the
         // @vimeo/player SDK accepts this directly via its `url` option.
         url: `https://vimeo.com/${v.id}${v.hash ? `/${v.hash}` : ''}`,
         providerId: v.id,
@@ -347,7 +347,7 @@ export function classifyMediaUrl(raw: string): MediaUrlResult {
     };
   }
 
-  // Unknown extension — let the HTML5 player attempt it (servers often omit extensions).
+  // Unknown extension, let the HTML5 player attempt it (servers often omit extensions).
   return {
     ok: true,
     media: {

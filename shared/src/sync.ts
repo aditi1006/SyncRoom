@@ -26,7 +26,7 @@ export function isValidTime(time: number): boolean {
 
 /**
  * Expected playback position for a host-authoritative state at `serverNow`
- * (a server-clock timestamp in ms — client must add its measured offset).
+ * (a server-clock timestamp in ms, client must add its measured offset).
  */
 export function expectedTime(state: SyncState, serverNow: number): number {
   if (!state.playing) return state.time;

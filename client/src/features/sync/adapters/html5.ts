@@ -28,7 +28,7 @@ export class Html5Adapter implements PlayerAdapter {
     video.className = 'h-full w-full bg-black';
     video.controls = controls;
     video.playsInline = true;
-    // NB: no `crossOrigin` — media elements can play cross-origin sources
+    // NB: no `crossOrigin`, media elements can play cross-origin sources
     // without CORS headers, and Google Drive (plus many direct-file hosts)
     // don't send them. Requesting anonymous CORS made those loads fail and
     // forced Drive into the unsynced iframe fallback. We never read pixels
@@ -45,7 +45,7 @@ export class Html5Adapter implements PlayerAdapter {
     video.addEventListener('pause', () => {
       if (!video.ended) this.cb?.({ type: 'pause', time: video.currentTime });
     });
-    // Echo filtering happens in the SyncController's intent ledger, not here —
+    // Echo filtering happens in the SyncController's intent ledger, not here,
     // adapters report everything, uniformly across providers.
     video.addEventListener('seeked', () => this.cb?.({ type: 'seek', time: video.currentTime }));
     video.addEventListener('ratechange', () =>

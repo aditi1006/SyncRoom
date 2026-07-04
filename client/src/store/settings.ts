@@ -32,7 +32,7 @@ interface SettingsStore extends Settings {
   reset: () => void;
 }
 
-/** Factory defaults — reused by the "Reset to defaults" action. */
+/** Factory defaults, reused by the "Reset to defaults" action. */
 export const DEFAULT_SETTINGS: Settings = {
   theme: 'dark',
   cameraId: null,
@@ -69,7 +69,7 @@ export const QUALITY_CONSTRAINTS: Record<QualityPreset, { width: number; height:
   '2160p': { width: 3840, height: 2160 },
 };
 
-/** Encoder bitrate ceilings (bps) — generous, favors quality over bandwidth. */
+/** Encoder bitrate ceilings (bps), generous, favors quality over bandwidth. */
 export const QUALITY_MAX_BITRATE: Record<QualityPreset, number> = {
   '720p': 4_000_000,
   '1080p': 8_000_000,

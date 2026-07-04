@@ -35,12 +35,12 @@ interface SyncDebugState {
 }
 
 export const useSyncDebug = create<SyncDebugState>((set) => ({
-  provider: '—',
+  provider: ', ',
   phase: 'idle',
-  playback: '—',
+  playback: ', ',
   time: 0,
   driftMs: 0,
-  lastEvent: '—',
+  lastEvent: ', ',
   latencyMs: 0,
   sent: 0,
   received: 0,

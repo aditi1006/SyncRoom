@@ -3,7 +3,7 @@ import { driveEmbedUrl } from '@syncroom/shared';
 import type { PlaybackState, PlayerAdapter, PlayerEvent } from './types';
 
 /**
- * Google Drive preview iframe — the graceful degradation target when Drive
+ * Google Drive preview iframe, the graceful degradation target when Drive
  * refuses direct streaming (virus-scan interstitial, quota, size).
  *
  * Drive's embedded player exposes NO playback API (no postMessage protocol,
@@ -28,7 +28,7 @@ export class DriveEmbedAdapter implements PlayerAdapter {
     return Promise.resolve();
   }
 
-  /* No playback API exists — every control is a deliberate no-op. */
+  /* No playback API exists, every control is a deliberate no-op. */
   play(): void {}
   pause(): void {}
   seek(_time: number): void {}

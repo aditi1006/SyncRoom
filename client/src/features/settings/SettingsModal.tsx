@@ -92,7 +92,7 @@ export function SettingsModal({ open, onClose, onDeviceChange, onReacquire }: Se
           />
           {!CAN_SET_SINK && (
             <p className="-mt-2 text-xs text-ink-faint">
-              This browser can’t switch audio output — it uses your system default.
+              This browser can’t switch audio output, it uses your system default.
             </p>
           )}
 
@@ -107,10 +107,10 @@ export function SettingsModal({ open, onClose, onDeviceChange, onReacquire }: Se
               onReacquire?.();
             }}
             options={[
-              { value: '720p', label: '720p — light on bandwidth' },
-              { value: '1080p', label: '1080p — recommended' },
-              { value: '1440p', label: '1440p — high' },
-              { value: '2160p', label: '4K — maximum (needs strong upload)' },
+              { value: '720p', label: '720p, light on bandwidth' },
+              { value: '1080p', label: '1080p, recommended' },
+              { value: '1440p', label: '1440p, high' },
+              { value: '2160p', label: '4K, maximum (needs strong upload)' },
             ]}
           />
           <Select
@@ -122,7 +122,7 @@ export function SettingsModal({ open, onClose, onDeviceChange, onReacquire }: Se
             }}
             options={[
               { value: '30', label: '30 fps' },
-              { value: '60', label: '60 fps — smooth motion' },
+              { value: '60', label: '60 fps, smooth motion' },
             ]}
           />
           <p className="text-xs text-ink-faint">
