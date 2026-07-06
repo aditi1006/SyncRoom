@@ -21,17 +21,35 @@ interface PeerRecord {
   screenSenders: Partial<Record<'audio' | 'video', RTCRtpSender>>;
 }
 
+/**
+ * ICE configuration, tuned to keep media direct (P2P) and only relay when a
+ * direct path is impossible.
+ *
+ * We list STUN first and TURN (if configured) second. With the default
+ * `iceTransportPolicy: 'all'`, the browser gathers host + server-reflexive
+ * (STUN) candidates and always *prefers* a direct connection; a TURN `relay`
+ * candidate is used only when no direct pair can be established (strict/
+ * symmetric NAT, ~10-15% of pairs). We never set `iceTransportPolicy: 'relay'`,
+ * which would force every call through TURN and defeat the point of P2P.
+ * VITE_TURN_URL may list several URLs (comma-separated), e.g. UDP + TCP/443.
+ */
 function iceServers(): RTCIceServer[] {
   const servers: RTCIceServer[] = [
     { urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'] },
   ];
   const turnUrl = import.meta.env.VITE_TURN_URL as string | undefined;
   if (turnUrl) {
-    servers.push({
-      urls: turnUrl,
-      username: (import.meta.env.VITE_TURN_USERNAME as string | undefined) ?? '',
-      credential: (import.meta.env.VITE_TURN_CREDENTIAL as string | undefined) ?? '',
-    });
+    const urls = turnUrl
+      .split(',')
+      .map((u) => u.trim())
+      .filter(Boolean);
+    if (urls.length > 0) {
+      servers.push({
+        urls,
+        username: (import.meta.env.VITE_TURN_USERNAME as string | undefined) ?? '',
+        credential: (import.meta.env.VITE_TURN_CREDENTIAL as string | undefined) ?? '',
+      });
+    }
   }
   return servers;
 }

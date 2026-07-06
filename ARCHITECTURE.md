@@ -111,6 +111,37 @@ Fully typed end-to-end: `ClientToServerEvents` / `ServerToClientEvents` interfac
 - Host-only actions verified server-side against `room.hostId`, never trusted from the client.
 - Duplicate-join rejection via per-tab `participantKey`; refresh reclaims the same identity within a grace window.
 
+### 7. Scalability & resilience
+
+The signaling server is deliberately cheap to run, and hardened so a load spike
+degrades gracefully instead of crashing. All knobs are env-configurable (see
+`.env.example`); defaults suit one ~512 MB / shared-CPU instance.
+
+- **Media never transits the server.** Audio/video is full-mesh P2P (SRTP); the
+  socket carries only JSON signaling + small room events. The single exception
+  is the Google-Drive proxy (a same-origin, seekable source for the synced
+  HTML5 player), which _streams_ (never buffers) and is capped at
+  `MAX_DRIVE_STREAMS` concurrent streams so it can't saturate the box.
+- **Overload protection.** New WebSocket handshakes past `MAX_CONNECTIONS` are
+  rejected at the Engine.IO `allowRequest` layer, _before_ a socket is
+  allocated, so newcomers can never starve users already in a room.
+- **Burst smoothing.** A token bucket meters admissions (`CONNECTION_BURST_PER_SEC`);
+  excess handshakes are staggered (unref'd timers, up to `CONNECTION_MAX_STAGGER_MS`)
+  rather than processed all at once, flattening CPU spikes without blocking the loop.
+- **Heartbeat.** Engine.IO pings every `PING_INTERVAL_MS` and drops a socket with
+  no pong within `PING_TIMEOUT_MS`; the `disconnect` handler then frees the
+  member, room (reaped when empty) and rate-limiter buckets, so abandoned tabs
+  don't leak memory. No bespoke ping loop, that would duplicate the transport.
+- **Lean signaling.** `perMessageDeflate` is off (CPU beats bandwidth on small
+  instances; payloads are tiny). Presence updates broadcast only when a flag
+  actually changes, dropping redundant full-snapshot fan-out.
+- **Memory hygiene.** Every timer is `unref`'d and cleared; rooms and rate-limiter
+  buckets are released on disconnect/empty. An optional watchdog exits when RSS
+  crosses `MEMORY_LIMIT_MB` so a leak becomes a restart, not an OOM kill.
+- **Crash safety.** `unhandledRejection` is logged; `uncaughtException` triggers
+  graceful shutdown (→ platform/PM2 restart). `SIGINT`/`SIGTERM` drain sockets
+  with a hard timeout backstop.
+
 ## Deployment shape
 
 One Node process serves both the SPA (static, from `client/dist`) and Socket.IO on a single port, deployable on any $5 VPS, Fly.io, Railway or Render. Split deployment (static host + tiny socket server) also supported via `VITE_SERVER_URL`. Details in `docs/DEPLOYMENT.md`.

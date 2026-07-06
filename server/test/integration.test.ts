@@ -174,8 +174,8 @@ describe('room lifecycle over sockets', () => {
   it('broadcasts the mirror-video presence flag to everyone', async () => {
     const host = client();
     const guest = client();
-    await join(host, { code: 'mirror-room', name: 'Host', key: 'mirror-host-01', create: true });
-    const gJoin = await join(guest, { code: 'mirror-room', name: 'G', key: 'mirror-guest-01' });
+    await join(host, { code: 'mirror-rm', name: 'Host', key: 'mirror-host-01', create: true });
+    const gJoin = await join(guest, { code: 'mirror-rm', name: 'G', key: 'mirror-guest-01' });
     expect(gJoin.ok).toBe(true);
 
     // Host turns mirroring on; the guest must see the host's flag flip.

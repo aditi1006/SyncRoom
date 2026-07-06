@@ -125,6 +125,25 @@ export function RoomPage() {
       saveName(name);
       setJoining(true);
       setJoinError('');
+
+      // Guard against an infinite "Joining…" spinner. If the socket can't reach
+      // the signaling server (server asleep/cold-starting, unreachable, or
+      // VITE_SERVER_URL misconfigured so the handshake never completes) the ack
+      // below never fires. This timeout surfaces an actionable error instead of
+      // hanging forever. `settled` makes the ack and the timeout mutually
+      // exclusive so a late ack can't clobber a shown error (or vice versa).
+      let settled = false;
+      const timer = setTimeout(() => {
+        if (settled) return;
+        settled = true;
+        setJoining(false);
+        setJoinError(
+          socket.connected
+            ? 'The server did not respond. Please try again.'
+            : 'Cannot reach the server. It may be waking up (up to ~30s on the free tier), retry in a moment. If this persists, the server URL may be misconfigured.',
+        );
+      }, 20_000);
+
       socket.emit(
         'room:join',
         {
@@ -134,6 +153,9 @@ export function RoomPage() {
           create: search.get('create') === '1',
         },
         (res) => {
+          if (settled) return;
+          settled = true;
+          clearTimeout(timer);
           setJoining(false);
           if (!res.ok || !res.selfId || !res.room) {
             setJoinError(JOIN_ERRORS[res.reason ?? 'not-found']);

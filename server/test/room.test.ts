@@ -103,11 +103,11 @@ describe('Room chat', () => {
 describe('RoomManager', () => {
   it('creates and rejects duplicate/invalid codes', () => {
     const mgr = new RoomManager();
-    expect(mgr.create('movie-night')).not.toBeNull();
-    expect(mgr.create('movie-night')).toBeNull();
+    expect(mgr.create('game-time')).not.toBeNull();
+    expect(mgr.create('game-time')).toBeNull();
     expect(mgr.create('BAD CODE')).toBeNull();
-    mgr.destroy('movie-night');
-    expect(mgr.get('movie-night')).toBeUndefined();
+    mgr.destroy('game-time');
+    expect(mgr.get('game-time')).toBeUndefined();
   });
 });
 
@@ -137,5 +137,15 @@ describe('RateLimiter', () => {
     t = 11 * 60 * 1000;
     rl.sweep();
     expect(rl.size).toBe(0);
+  });
+
+  it('clears every bucket for a key across classes', () => {
+    const rl = new RateLimiter(() => 0);
+    rl.allow('sockA', 'signal');
+    rl.allow('sockA', 'chat');
+    rl.allow('sockB', 'signal');
+    rl.clear('sockA');
+    // Only sockB's bucket remains.
+    expect(rl.size).toBe(1);
   });
 });

@@ -179,6 +179,9 @@ export function registerHandlers(
     socket.on('room:leave', leaveRoom);
 
     socket.on('disconnect', () => {
+      // Reclaim this socket's rate-limiter buckets right away rather than
+      // waiting for the periodic sweep, keeps memory flat under churn.
+      limiter.clear(socket.id);
       const ctx = self();
       if (!ctx) return;
       const { room, id } = ctx;
@@ -282,12 +285,28 @@ export function registerHandlers(
       if (!guard('generic')) return;
       const ctx = self();
       if (!ctx || typeof flags !== 'object' || flags === null) return;
+      // Only broadcast when a flag actually flips. Clients re-send presence on
+      // reconnect/track changes, and re-emitting an identical full snapshot to
+      // the whole room is pure waste, this drops those redundant broadcasts.
       const p = ctx.room.members.get(ctx.id)!.participant;
-      if (typeof flags.micOn === 'boolean') p.micOn = flags.micOn;
-      if (typeof flags.cameraOn === 'boolean') p.cameraOn = flags.cameraOn;
-      if (typeof flags.screenSharing === 'boolean') p.screenSharing = flags.screenSharing;
-      if (typeof flags.mirrored === 'boolean') p.mirrored = flags.mirrored;
-      broadcastState(ctx.room);
+      let changed = false;
+      if (typeof flags.micOn === 'boolean' && p.micOn !== flags.micOn) {
+        p.micOn = flags.micOn;
+        changed = true;
+      }
+      if (typeof flags.cameraOn === 'boolean' && p.cameraOn !== flags.cameraOn) {
+        p.cameraOn = flags.cameraOn;
+        changed = true;
+      }
+      if (typeof flags.screenSharing === 'boolean' && p.screenSharing !== flags.screenSharing) {
+        p.screenSharing = flags.screenSharing;
+        changed = true;
+      }
+      if (typeof flags.mirrored === 'boolean' && p.mirrored !== flags.mirrored) {
+        p.mirrored = flags.mirrored;
+        changed = true;
+      }
+      if (changed) broadcastState(ctx.room);
     });
 
     /* ------------------------------ webrtc signaling ------------------------------ */

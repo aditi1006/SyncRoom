@@ -59,6 +59,18 @@ export class RateLimiter {
     }
   }
 
+  /**
+   * Drops every bucket belonging to a key (all classes). Called on disconnect
+   * so a socket's buckets are reclaimed immediately instead of lingering until
+   * the next periodic sweep, which matters under high connection churn.
+   */
+  clear(key: string): void {
+    const suffix = `:${key}`;
+    for (const id of this.buckets.keys()) {
+      if (id.endsWith(suffix)) this.buckets.delete(id);
+    }
+  }
+
   get size(): number {
     return this.buckets.size;
   }
