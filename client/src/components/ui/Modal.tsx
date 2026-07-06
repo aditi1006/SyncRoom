@@ -40,7 +40,7 @@ export function Modal({ open, onClose, title, children, wide = false }: ModalPro
         aria-label={title}
         tabIndex={-1}
         className={cn(
-          'glass w-full rounded-2xl p-6 shadow-2xl animate-scale-in focus:outline-none',
+          'glass max-h-[90dvh] w-full overflow-y-auto rounded-2xl p-6 shadow-2xl animate-scale-in focus:outline-none',
           wide ? 'max-w-2xl' : 'max-w-md',
         )}
       >

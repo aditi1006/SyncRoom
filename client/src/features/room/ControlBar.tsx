@@ -8,6 +8,7 @@ import {
   Minimize,
   MonitorUp,
   PhoneOff,
+  SwitchCamera,
   Tv,
   Users,
 } from 'lucide-react';
@@ -22,6 +23,9 @@ export interface ControlBarProps {
   onLeave: () => void;
   onToggleFullscreen: () => void;
   isFullscreen: boolean;
+  /** Cycle to the next camera (front/back). Shown only when >1 camera exists. */
+  onFlipCamera?: () => void;
+  canFlipCamera?: boolean;
 }
 
 export function ControlBar({
@@ -31,6 +35,8 @@ export function ControlBar({
   onLeave,
   onToggleFullscreen,
   isFullscreen,
+  onFlipCamera,
+  canFlipCamera = false,
 }: ControlBarProps) {
   const micOn = useRoomStore((s) => s.micOn);
   const cameraOn = useRoomStore((s) => s.cameraOn);
@@ -43,7 +49,7 @@ export function ControlBar({
     setPanel(panel === kind ? null : kind);
 
   return (
-    <div className="glass mx-auto flex w-fit items-center gap-2 rounded-2xl px-3 py-2 shadow-2xl animate-slide-up">
+    <div className="glass mx-auto flex max-w-full flex-wrap items-center justify-center gap-1.5 rounded-2xl px-2 py-2 shadow-2xl animate-slide-up sm:w-fit sm:flex-nowrap sm:gap-2 sm:px-3">
       <IconButton
         label={micOn ? 'Mute microphone (M)' : 'Unmute microphone (M)'}
         danger={!micOn}
@@ -58,6 +64,11 @@ export function ControlBar({
       >
         {cameraOn ? <Camera size={19} /> : <CameraOff size={19} />}
       </IconButton>
+      {canFlipCamera && (
+        <IconButton label="Switch camera" onClick={onFlipCamera} disabled={!cameraOn}>
+          <SwitchCamera size={19} />
+        </IconButton>
+      )}
       <IconButton
         label={sharing ? 'Stop sharing screen (S)' : 'Share screen (S)'}
         active={sharing}
@@ -66,7 +77,7 @@ export function ControlBar({
         <MonitorUp size={19} />
       </IconButton>
 
-      <span className="mx-1 h-7 w-px bg-line" aria-hidden />
+      <span className="mx-1 hidden h-7 w-px bg-line sm:block" aria-hidden />
 
       <span className="relative">
         <IconButton label="Chat (C)" active={panel === 'chat'} onClick={() => togglePanel('chat')}>
@@ -105,7 +116,7 @@ export function ControlBar({
         {isFullscreen ? <Minimize size={19} /> : <Maximize size={19} />}
       </IconButton>
 
-      <span className="mx-1 h-7 w-px bg-line" aria-hidden />
+      <span className="mx-1 hidden h-7 w-px bg-line sm:block" aria-hidden />
 
       <IconButton label="Leave call" danger onClick={onLeave} className="w-14">
         <PhoneOff size={19} />
