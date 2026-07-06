@@ -24,14 +24,11 @@ interface Tile {
   peerId: string | null;
 }
 
-// Mobile uses fewer columns so tiles stay large enough to be useful; the `sm:`
-// values preserve the original desktop layout exactly (breakpoint = 640px).
 const gridCols = (n: number): string => {
   if (n <= 1) return 'grid-cols-1';
-  if (n <= 2) return 'grid-cols-1 sm:grid-cols-2';
   if (n <= 4) return 'grid-cols-2';
-  if (n <= 9) return 'grid-cols-2 sm:grid-cols-3';
-  return 'grid-cols-3 sm:grid-cols-4';
+  if (n <= 9) return 'grid-cols-3';
+  return 'grid-cols-4';
 };
 
 export function VideoGrid({
@@ -159,15 +156,7 @@ export function VideoGrid({
   }
 
   return (
-    // Mobile: tiles keep their natural 16:9 shape and the grid centers them, so
-    // a single webcam is a normal landscape card instead of a full-height,
-    // heavily-cropped portrait slab. Desktop (sm+) keeps the fill-the-space grid.
-    <div
-      className={cn(
-        'grid h-full gap-2 overflow-y-auto content-center sm:content-normal sm:gap-3 sm:auto-rows-fr sm:overflow-visible',
-        gridCols(tiles.length),
-      )}
-    >
+    <div className={cn('grid h-full auto-rows-fr gap-2 sm:gap-3', gridCols(tiles.length))}>
       {tiles.map((t) => (
         <VideoTile
           key={t.key}
@@ -180,7 +169,7 @@ export function VideoGrid({
           isScreen={t.isScreen}
           mirrored={mirroredFor(t)}
           stats={t.peerId ? stats[t.peerId] : undefined}
-          className="aspect-video sm:aspect-auto sm:min-h-0"
+          className="min-h-0"
         />
       ))}
     </div>

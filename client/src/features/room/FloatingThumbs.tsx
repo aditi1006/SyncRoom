@@ -3,7 +3,6 @@ import { GripHorizontal } from 'lucide-react';
 import type { RemoteFeed } from '@/features/call/usePeerConnections';
 import type { PeerStats } from '@/features/call/useCallStats';
 import { useRoomStore } from '@/store/room';
-import { useSettings } from '@/store/settings';
 import { cn } from '@/lib/utils';
 import { VideoTile } from './VideoTile';
 
@@ -24,11 +23,6 @@ export function FloatingThumbs({ localStream, screenStream, feeds, stats }: Floa
   const micOn = useRoomStore((s) => s.micOn);
   const cameraOn = useRoomStore((s) => s.cameraOn);
   const participants = useRoomStore((s) => s.room?.participants ?? []);
-  // Mirror consistently with the grid: self by the local setting, remotes by
-  // each participant's broadcast flag. Without this the cinema-fullscreen
-  // thumbnails rendered un-mirrored, so a self-view flipped when you went
-  // fullscreen.
-  const mirrorSelf = useSettings((s) => s.mirrorVideo);
 
   const boxRef = useRef<HTMLDivElement>(null);
   /** null = default anchor (top-right); set on first drag. */
@@ -94,7 +88,6 @@ export function FloatingThumbs({ localStream, screenStream, feeds, stats }: Floa
             micOn={micOn}
             cameraOn={cameraOn}
             isScreen={screenStream !== null}
-            mirrored={screenStream === null && mirrorSelf}
             className="aspect-video w-40 shadow-2xl"
           />
         )}
@@ -108,7 +101,6 @@ export function FloatingThumbs({ localStream, screenStream, feeds, stats }: Floa
               isHost={p.isHost}
               micOn={p.micOn}
               cameraOn={p.cameraOn}
-              mirrored={p.mirrored}
               stats={stats[f.peerId]}
               className="aspect-video w-40 shadow-2xl"
             />

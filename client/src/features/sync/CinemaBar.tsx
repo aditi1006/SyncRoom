@@ -1,13 +1,11 @@
 import { useEffect, useState, type CSSProperties } from 'react';
 import {
-  FastForward,
   Maximize,
   MessageSquare,
   Minimize,
   Pause,
   PhoneOff,
   Play,
-  Rewind,
   Users,
   Volume2,
   VolumeX,
@@ -126,12 +124,6 @@ export function CinemaBar({
     socket.emit('sync:seek', { time: t, eventId: crypto.randomUUID() });
   };
 
-  const seekBy = (delta: number): void => {
-    if (!canControl || !(playhead?.seekable ?? false)) return;
-    const target = Math.max(0, time + delta);
-    commitSeek(duration ? Math.min(target, duration) : target);
-  };
-
   const applyVolume = (v: number): void => {
     setVolume(v);
     player.setVolume(v);
@@ -177,16 +169,6 @@ export function CinemaBar({
         <div className="flex items-center gap-1.5">
           <button
             type="button"
-            aria-label="Back 5 seconds"
-            title="Back 5s (←)"
-            disabled={!canControl || !(playhead?.seekable ?? false)}
-            onClick={() => seekBy(-5)}
-            className="cursor-pointer rounded-full p-2 text-white transition-colors hover:bg-white/15 disabled:opacity-40"
-          >
-            <Rewind size={18} />
-          </button>
-          <button
-            type="button"
             aria-label={playing ? 'Pause for everyone' : 'Play for everyone'}
             title={canControl ? undefined : 'Only the host can control playback'}
             disabled={!canControl}
@@ -194,16 +176,6 @@ export function CinemaBar({
             className="cursor-pointer rounded-full p-2 text-white transition-colors hover:bg-white/15 disabled:opacity-40"
           >
             {playing ? <Pause size={20} /> : <Play size={20} />}
-          </button>
-          <button
-            type="button"
-            aria-label="Forward 5 seconds"
-            title="Forward 5s (→)"
-            disabled={!canControl || !(playhead?.seekable ?? false)}
-            onClick={() => seekBy(5)}
-            className="cursor-pointer rounded-full p-2 text-white transition-colors hover:bg-white/15 disabled:opacity-40"
-          >
-            <FastForward size={18} />
           </button>
 
           <button

@@ -8,7 +8,6 @@ import { getParticipantKey, saveName } from '@/lib/session';
 import { useRoomStore } from '@/store/room';
 import { useSettings } from '@/store/settings';
 import { useLocalMedia } from '@/features/call/useLocalMedia';
-import { useMediaDevices } from '@/features/call/useMediaDevices';
 import { usePeerConnections } from '@/features/call/usePeerConnections';
 import { useCallStats } from '@/features/call/useCallStats';
 import { useKeyboardShortcuts, type ShortcutMap } from '@/hooks/useKeyboardShortcuts';
@@ -71,40 +70,12 @@ export function RoomPage() {
   );
 
   const local = useLocalMedia();
-  const { cameras } = useMediaDevices();
   const { feeds, peersRef, syncAllTracks } = usePeerConnections({
     active: joined,
     localStream: local.stream,
     screenStream,
   });
   const stats = useCallStats(peersRef, joined);
-
-  /* Cycle to the next camera (front ↔ back on phones, or between webcams) and
-     push the new track to every peer. Available after joining, no rejoin. */
-  const flipCamera = useCallback((): void => {
-    if (cameras.length < 2) return;
-    const currentId = useSettings.getState().cameraId;
-    const idx = Math.max(
-      0,
-      cameras.findIndex((c) => c.deviceId === currentId),
-    );
-    const next = cameras[(idx + 1) % cameras.length];
-    if (!next) return;
-    useSettings.getState().update({ cameraId: next.deviceId });
-    void local.switchCamera(next.deviceId).then(() => syncAllTracks());
-  }, [cameras, local, syncAllTracks]);
-
-  /* Skip playback by a delta (5s buttons / arrow keys), routed through the
-     normal sync pipeline so everyone stays in sync. */
-  const seekBy = useCallback((delta: number): void => {
-    const st = useRoomStore.getState();
-    const sync = st.syncState;
-    if (!sync?.media) return;
-    const canControl = st.room?.controlMode === 'everyone' || st.room?.hostId === st.selfId;
-    if (!canControl) return;
-    const t = Math.max(0, expectedTime(sync, serverNow()) + delta);
-    socket.emit('sync:seek', { time: t, eventId: crypto.randomUUID() });
-  }, []);
 
   /* Two fullscreen targets: the media stage (cinema mode, keeps thumbnails,
      chat overlays and the floating bar inside) when media is active, the
@@ -128,16 +99,6 @@ export function RoomPage() {
   useEffect(() => {
     if (!hasMedia && stageFs.isFullscreen) stageFsExit();
   }, [hasMedia, stageFs.isFullscreen, stageFsExit]);
-
-  /* Keep keyboard shortcuts working in fullscreen. Entering fullscreen (or
-     clicking a player iframe) can move focus into the fullscreen subtree or a
-     cross-origin iframe (e.g. YouTube), which would swallow key events before
-     they reach our window listener. Pulling focus onto the fullscreen
-     container routes M/V/arrows/etc. back to our handler. */
-  useEffect(() => {
-    if (stageFs.isFullscreen) stageRef.current?.focus();
-    else if (pageFs.isFullscreen) pageRef.current?.focus();
-  }, [stageFs.isFullscreen, pageFs.isFullscreen]);
 
   /* Honor the "join with mic/camera off" preferences before the lobby
      preview and the join handshake read these flags. Runs once per mount. */
@@ -337,11 +298,8 @@ export function RoomPage() {
       f: toggleFullscreen,
       space: togglePlayback,
       escape: () => setPanel(null),
-      // Arrow keys skip playback ±5s, only while media is loaded (so they
-      // still scroll/navigate normally on the plain call screen).
-      ...(hasMedia ? { arrowleft: () => seekBy(-5), arrowright: () => seekBy(5) } : {}),
     }),
-    [setMedia, setPanel, toggleShare, toggleFullscreen, togglePlayback, hasMedia, seekBy],
+    [setMedia, setPanel, toggleShare, toggleFullscreen, togglePlayback],
   );
   useKeyboardShortcuts(joined ? shortcuts : {});
 
@@ -379,7 +337,7 @@ export function RoomPage() {
   const panelTitle = panel === 'chat' ? 'Chat' : panel === 'people' ? 'People' : 'Watch together';
 
   return (
-    <div ref={pageRef} tabIndex={-1} className="flex h-dvh flex-col bg-surface focus:outline-none">
+    <div ref={pageRef} className="flex h-dvh flex-col bg-surface">
       <TopBar stats={stats} onOpenSettings={() => setSettingsOpen(true)} />
 
       <div className="flex min-h-0 flex-1 gap-3 px-3 pb-2">
@@ -426,7 +384,7 @@ export function RoomPage() {
             page-level panel so components (and their effects) aren't doubled. */}
         {panel && !stageFs.isFullscreen && (
           <aside
-            className="glass fixed inset-x-2 bottom-32 top-16 z-30 flex flex-col overflow-hidden rounded-2xl shadow-2xl animate-slide-in-right sm:static sm:inset-auto sm:bottom-auto sm:top-auto sm:z-auto sm:w-80 sm:shrink-0"
+            className="glass fixed inset-x-2 bottom-24 top-16 z-30 flex flex-col overflow-hidden rounded-2xl shadow-2xl animate-slide-in-right sm:static sm:inset-auto sm:z-auto sm:w-80 sm:shrink-0"
             aria-label={panelTitle}
           >
             <div className="flex items-center justify-between border-b border-line px-4 py-3">
@@ -457,8 +415,6 @@ export function RoomPage() {
           onLeave={leave}
           onToggleFullscreen={toggleFullscreen}
           isFullscreen={isFullscreen}
-          onFlipCamera={flipCamera}
-          canFlipCamera={cameras.length > 1}
         />
       </footer>
 

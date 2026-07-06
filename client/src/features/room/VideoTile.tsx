@@ -37,32 +37,6 @@ export function VideoTile({
   const showStats = useSettings((s) => s.showStats);
   const [pipActive, setPipActive] = useState(false);
 
-  /* A remote video track fires `mute` when media stops flowing (poor network,
-     paused sender) and `unmute` when it resumes. While stalled the <video>
-     would just paint a frozen or black frame, so we treat it like camera-off
-     and show the participant's avatar instead. The tile never disappears, the
-     participant stays visible with their name until their stream recovers. */
-  const [videoStalled, setVideoStalled] = useState(false);
-  useEffect(() => {
-    if (!stream || isSelf) {
-      setVideoStalled(false);
-      return;
-    }
-    const track = stream.getVideoTracks()[0];
-    if (!track) {
-      setVideoStalled(false);
-      return;
-    }
-    const update = (): void => setVideoStalled(track.muted);
-    update();
-    track.addEventListener('mute', update);
-    track.addEventListener('unmute', update);
-    return () => {
-      track.removeEventListener('mute', update);
-      track.removeEventListener('unmute', update);
-    };
-  }, [stream, isSelf]);
-
   useEffect(() => {
     const el = videoRef.current;
     if (el && el.srcObject !== stream) {
@@ -79,10 +53,7 @@ export function VideoTile({
     }
   }, [speakerId, isSelf]);
 
-  // Camera stalls fall back to the avatar; screen shares keep their last frame
-  // (a frozen slide reads better than a placeholder).
-  const cameraStalled = videoStalled && !isScreen;
-  const showVideo = stream !== null && (cameraOn || isScreen) && !cameraStalled;
+  const showVideo = stream !== null && (cameraOn || isScreen);
 
   /* Track PiP so we can hide the inline element while it is mirrored to the
      PiP window, that suppresses the browser's big "Playing in picture-in-
@@ -163,9 +134,6 @@ export function VideoTile({
           </div>
           {pipActive && showVideo && (
             <span className="text-xs text-ink-faint">In picture-in-picture</span>
-          )}
-          {cameraStalled && !pipActive && (
-            <span className="text-xs text-ink-faint">Reconnecting…</span>
           )}
         </div>
       )}

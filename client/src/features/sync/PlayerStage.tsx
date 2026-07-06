@@ -98,9 +98,8 @@ export function PlayerStage({
   return (
     <div
       ref={fsRef}
-      tabIndex={-1}
       className={cn(
-        'relative flex h-full w-full flex-col overflow-hidden bg-black focus:outline-none',
+        'relative flex h-full w-full flex-col overflow-hidden bg-black',
         isFullscreen ? 'rounded-none' : 'rounded-2xl',
         hideCursor && 'cursor-idle',
       )}
