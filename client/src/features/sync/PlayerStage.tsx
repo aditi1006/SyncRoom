@@ -110,9 +110,13 @@ export function PlayerStage({
       {driveFallback && (
         <div className="glass z-10 flex items-center gap-2 px-4 py-2 text-xs text-warning">
           <AlertTriangle size={14} className="shrink-0" />
-          This Google Drive file can’t be synced, Drive’s own player has no controls we can drive,
-          so everyone presses play themselves. For synced playback, make sure it’s shared “Anyone
-          with the link”, or use a direct MP4, YouTube or Vimeo link.
+          {driveFallback === 'unsupported'
+            ? 'This video’s format can’t be played in a browser (likely MKV or H.265/HEVC), so it can’t be synced. Re-save it as an MP4 (H.264), or use a YouTube/Vimeo/direct-MP4 link. Playing in Drive’s own player for now.'
+            : driveFallback === 'network'
+              ? 'Couldn’t load this Drive file for synced playback. Make sure it’s shared “Anyone with the link” and not in Trash. Playing in Drive’s own player for now.'
+              : driveFallback === 'timeout'
+                ? 'This Drive file is taking too long to start (it may be very large). Playing in Drive’s own player, reload to retry synced playback.'
+                : 'This Google Drive file can’t be synced, Drive’s own player has no controls we can drive, so everyone presses play themselves. For synced playback, use a direct MP4, YouTube or Vimeo link.'}
         </div>
       )}
       {!playerReady && (

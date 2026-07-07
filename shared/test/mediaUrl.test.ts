@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { classifyMediaUrl, driveEmbedUrl, parseMediaUrl } from '../src/mediaUrl';
+import {
+  classifyMediaUrl,
+  driveEmbedUrl,
+  driveHlsUrl,
+  parseMediaUrl,
+} from '../src/mediaUrl';
 
 describe('parseMediaUrl', () => {
   it('parses standard YouTube watch URLs', () => {
@@ -26,6 +31,9 @@ describe('parseMediaUrl', () => {
     expect(m?.providerId).toBe('1a2B3c4D5e6F7g8H9');
     expect(m?.url).toBe('/drive/1a2B3c4D5e6F7g8H9');
     expect(driveEmbedUrl('1a2B3c4D5e6F7g8H9')).toContain('/preview');
+    // Same id also yields the same-origin HLS transcode path (unplayable
+    // containers are re-encoded server-side so they still sync).
+    expect(driveHlsUrl('1a2B3c4D5e6F7g8H9')).toBe('/drive/1a2B3c4D5e6F7g8H9/hls/index.m3u8');
   });
 
   it('classifies direct files, HLS and DASH', () => {

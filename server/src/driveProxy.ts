@@ -34,7 +34,7 @@ const PASS_HEADERS = [
  * Attribute order inside each <input> is not guaranteed, so name and value are
  * matched independently per tag.
  */
-function parseConfirmForm(html: string): Record<string, string> | null {
+export function parseConfirmForm(html: string): Record<string, string> | null {
   const params: Record<string, string> = {};
   for (const tag of html.matchAll(/<input\b[^>]*>/gi)) {
     const name = /\bname="([^"]*)"/i.exec(tag[0])?.[1];
@@ -44,7 +44,122 @@ function parseConfirmForm(html: string): Record<string, string> | null {
   return params.id ? params : null;
 }
 
-async function fetchDrive(
+/**
+ * Builds the confirm-download URL from the interstitial HTML. Prefers the
+ * hidden <form> fields (they carry the per-file confirm token + uuid); if the
+ * markup shape changes, falls back to scraping a `confirm=…` link so a Google
+ * template tweak degrades to best-effort instead of an outright failure.
+ */
+export function confirmUrlFrom(html: string, id: string): string | null {
+  const params = parseConfirmForm(html);
+  if (params) {
+    const url = new URL(DOWNLOAD);
+    for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
+    return url.toString();
+  }
+  const token = /[?&](?:amp;)?confirm=([\w-]+)/i.exec(html)?.[1];
+  if (!token) return null;
+  const url = new URL(DOWNLOAD);
+  url.searchParams.set('id', id);
+  url.searchParams.set('export', 'download');
+  url.searchParams.set('confirm', token);
+  const uuid = /[?&](?:amp;)?uuid=([\w-]+)/i.exec(html)?.[1];
+  if (uuid) url.searchParams.set('uuid', uuid);
+  return url.toString();
+}
+
+/**
+ * Collapses a response's Set-Cookie headers into a single Cookie request
+ * header (name=value pairs only). Google's large-file interstitial sets a
+ * download-warning cookie that the confirm request is rejected without, so it
+ * must be echoed, otherwise the second fetch loops straight back to HTML.
+ */
+export function cookieHeaderFrom(res: globalThis.Response): string | null {
+  const jar =
+    typeof res.headers.getSetCookie === 'function'
+      ? res.headers.getSetCookie()
+      : ((): string[] => {
+          const raw = res.headers.get('set-cookie');
+          return raw ? [raw] : [];
+        })();
+  const pairs = jar
+    .map((c) => c.split(';', 1)[0]?.trim())
+    .filter((p): p is string => !!p && p.includes('='));
+  return pairs.length ? pairs.join('; ') : null;
+}
+
+/**
+ * Extracts the filename from an upstream Content-Disposition header. Google
+ * always sends `attachment; filename="…"` (and usually an RFC 5987
+ * `filename*=UTF-8''…` twin for non-ASCII names); the starred form is
+ * preferred since it survives arbitrary characters. Returns null if the
+ * header is absent or names nothing.
+ */
+export function filenameFromDisposition(res: globalThis.Response): string | null {
+  const disposition = res.headers.get('content-disposition');
+  if (!disposition) return null;
+  const starred = /filename\*=(?:UTF-8|utf-8)''([^;]+)/.exec(disposition)?.[1];
+  if (starred) {
+    try {
+      return decodeURIComponent(starred.trim());
+    } catch {
+      // Malformed percent-encoding, fall through to the plain form.
+    }
+  }
+  return /filename="([^"]+)"/.exec(disposition)?.[1] ?? null;
+}
+
+/** Extensions browsers can decode in <video>, mapped to their MIME types. */
+const PLAYABLE_MIME: Record<string, string> = {
+  mp4: 'video/mp4',
+  m4v: 'video/mp4',
+  webm: 'video/webm',
+  ogv: 'video/ogg',
+  ogg: 'video/ogg',
+  mov: 'video/mp4', // Many .mov files are H.264/AAC in an MP4-compatible box.
+};
+
+/**
+ * Containers no browser's <video> element can decode. Used to fail fast with
+ * a helpful message instead of streaming megabytes the player will reject.
+ */
+export const UNPLAYABLE_EXTENSIONS = new Set([
+  'mpg',
+  'mpeg',
+  'mkv',
+  'avi',
+  'wmv',
+  'flv',
+  'ts',
+  'm2ts',
+  'vob',
+  '3gp',
+  'rmvb',
+]);
+
+function extensionOf(name: string | null): string | null {
+  const ext = name ? /\.([A-Za-z0-9]+)$/.exec(name)?.[1] : undefined;
+  return ext ? ext.toLowerCase() : null;
+}
+
+/**
+ * Maps a filename to the MIME type a browser needs to play it, or null when
+ * the extension is unknown or not browser-playable. Drive labels everything
+ * `application/octet-stream`, which some browsers refuse to sniff as video,
+ * so the proxy restores a real type from the name where it can.
+ */
+export function videoMimeForFilename(name: string | null): string | null {
+  const ext = extensionOf(name);
+  return ext ? (PLAYABLE_MIME[ext] ?? null) : null;
+}
+
+/** True when the filename's container is known to be un-playable in <video>. */
+export function isUnplayableContainer(name: string | null): boolean {
+  const ext = extensionOf(name);
+  return !!ext && UNPLAYABLE_EXTENSIONS.has(ext);
+}
+
+export async function fetchDrive(
   id: string,
   range: string | undefined,
   signal: AbortSignal,
@@ -59,13 +174,16 @@ async function fetchDrive(
   const ct = first.headers.get('content-type') ?? '';
   if (!ct.includes('text/html')) return first;
 
-  // Large-file virus-scan interstitial, resubmit the form it returned
-  // (carries the per-file confirm token + uuid) to get the actual bytes.
-  const params = parseConfirmForm(await first.text());
-  if (!params) return first;
-  const url = new URL(DOWNLOAD);
-  for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
-  return fetch(url, { headers, redirect: 'follow', signal });
+  // Large-file virus-scan interstitial, resubmit the form it returned (carries
+  // the per-file confirm token + uuid) to get the actual bytes, echoing any
+  // cookie Google set on it, the confirm request 404s/loops back to HTML
+  // without it.
+  const confirmUrl = confirmUrlFrom(await first.text(), id);
+  if (!confirmUrl) return first;
+  const cookie = cookieHeaderFrom(first);
+  const confirmHeaders: Record<string, string> = { ...headers };
+  if (cookie) confirmHeaders.cookie = cookie;
+  return fetch(confirmUrl, { headers: confirmHeaders, redirect: 'follow', signal });
 }
 
 export async function driveProxy(req: Request, res: Response): Promise<void> {
@@ -99,10 +217,29 @@ export async function driveProxy(req: Request, res: Response): Promise<void> {
     return;
   }
 
+  // Fail fast on containers no browser can decode: a clear error beats
+  // streaming megabytes only for the <video> element to reject them.
+  const filename = filenameFromDisposition(upstream);
+  if (isUnplayableContainer(filename)) {
+    const ext = extensionOf(filename);
+    res.status(415).json({
+      error: `This video format (${ext}) can’t be played in a browser. Re-save it as MP4 (H.264) for synced playback.`,
+      code: 'unplayable-format',
+    });
+    return;
+  }
+
   res.status(upstream.status); // 200, or 206 for a satisfied Range request
   for (const h of PASS_HEADERS) {
     const v = upstream.headers.get(h);
     if (v) res.setHeader(h, v);
+  }
+  // Drive labels everything application/octet-stream; restore a real video
+  // type from the filename so browsers don't refuse to sniff it. Must come
+  // after the PASS_HEADERS loop so it wins over the upstream content-type.
+  if (!ct || ct.includes('application/octet-stream')) {
+    const mime = videoMimeForFilename(filename);
+    if (mime) res.setHeader('Content-Type', mime);
   }
   if (!res.getHeader('accept-ranges')) res.setHeader('Accept-Ranges', 'bytes');
   res.setHeader('Cache-Control', 'private, max-age=3600');

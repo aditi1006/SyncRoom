@@ -1,7 +1,23 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from 'react';
 import { socket } from '@/lib/socket';
 import { canSelfControl, isSelfHost, useRoomStore } from '@/store/room';
-import { SyncController, type ControllerPhase } from './SyncController';
+import {
+  SyncController,
+  type ControllerPhase,
+  type DriveFallbackReason,
+} from './SyncController';
+
+/** User-facing explanation for each Drive fallback cause. */
+const DRIVE_FALLBACK_TEXT: Record<DriveFallbackReason, string> = {
+  unsupported:
+    'This video’s format can’t be played in a browser (likely MKV or H.265/HEVC). Re-save it as an MP4 (H.264) for synced playback. Showing Drive’s own player for now.',
+  network:
+    'Couldn’t load this Drive file. Check it’s shared “Anyone with the link” and not in Trash. Showing Drive’s own player for now.',
+  timeout:
+    'This Drive file is taking too long to start (it may be very large). Showing Drive’s own player, reload to retry synced playback.',
+  unknown:
+    'This Google Drive file can’t be synced, playing in Drive’s player, so each person controls their own playback.',
+};
 
 /**
  * Thin React binding for the SyncController state machine.
@@ -28,7 +44,7 @@ export interface LocalPlayerFacade {
 }
 
 export function useSyncEngine(containerRef: RefObject<HTMLDivElement | null>): {
-  driveFallback: boolean;
+  driveFallback: DriveFallbackReason | null;
   playerReady: boolean;
   autoplayBlocked: boolean;
   resume: () => void;
@@ -39,7 +55,7 @@ export function useSyncEngine(containerRef: RefObject<HTMLDivElement | null>): {
   const canControl = useRoomStore((s) => canSelfControl(s));
   const mediaId = syncState?.media?.id ?? null;
 
-  const [driveFallback, setDriveFallback] = useState(false);
+  const [driveFallback, setDriveFallback] = useState<DriveFallbackReason | null>(null);
   const [autoplayBlocked, setAutoplayBlocked] = useState(false);
   const [phase, setPhase] = useState<ControllerPhase>('loading');
   const controllerRef = useRef<SyncController | null>(null);
@@ -50,7 +66,7 @@ export function useSyncEngine(containerRef: RefObject<HTMLDivElement | null>): {
     const container = containerRef.current;
     const store = useRoomStore.getState();
     const media = store.syncState?.media ?? null;
-    setDriveFallback(false);
+    setDriveFallback(null);
     setAutoplayBlocked(false);
     setPhase('loading');
     if (!container || !media) return;
@@ -64,16 +80,12 @@ export function useSyncEngine(containerRef: RefObject<HTMLDivElement | null>): {
       onError: (message) => {
         useRoomStore.getState().toast('error', message, `media-error:${media.id}`);
       },
-      onSyncUnavailable: () => {
-        setDriveFallback(true);
+      onSyncUnavailable: (reason) => {
+        setDriveFallback(reason);
         setPhase('ready');
         useRoomStore
           .getState()
-          .toast(
-            'info',
-            'This Google Drive file can’t be synced, playing in Drive’s player, so each person controls their own playback.',
-            'drive-fallback',
-          );
+          .toast(reason === 'unknown' ? 'info' : 'error', DRIVE_FALLBACK_TEXT[reason], 'drive-fallback');
       },
       onAutoplayBlocked: () => setAutoplayBlocked(true),
       onEnded: () => {

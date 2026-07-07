@@ -8,7 +8,7 @@ export type PlayerEvent =
   | { type: 'rate'; rate: number }
   | { type: 'ended' }
   | { type: 'autoplay-blocked' }
-  | { type: 'error'; message: string }
+  | { type: 'error'; message: string; kind?: 'unsupported' | 'network' | 'decode' | 'other' }
   /** Bytes are downloading (source is alive, just not ready yet). */
   | { type: 'loadprogress' };
 

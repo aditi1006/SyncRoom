@@ -108,6 +108,17 @@ export function driveDirectUrl(fileId: string): string {
   return `/drive/${fileId}`;
 }
 
+/**
+ * Same-origin HLS URL for a Drive file the server transcodes on the fly (via
+ * ffmpeg). Used when the file's container/codec can't play directly in a
+ * browser <video> (MPEG-2 .MPG, MKV…): the server re-encodes it to H.264/AAC
+ * HLS so it still plays in the SYNCED player rather than dropping to Drive's
+ * un-syncable preview iframe. Relative for the same reason as driveDirectUrl.
+ */
+export function driveHlsUrl(fileId: string): string {
+  return `/drive/${fileId}/hls/index.m3u8`;
+}
+
 /** Iframe preview URL, always renders, but exposes no playback API (no sync). */
 export function driveEmbedUrl(fileId: string): string {
   return `https://drive.google.com/file/d/${fileId}/preview`;

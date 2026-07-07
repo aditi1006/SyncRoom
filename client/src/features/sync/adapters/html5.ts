@@ -60,13 +60,23 @@ export class Html5Adapter implements PlayerAdapter {
     video.addEventListener('ended', () => this.cb?.({ type: 'ended' }));
     video.addEventListener('error', () => {
       const code = video.error?.code;
-      const message =
+      const kind =
         code === MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED
+          ? 'unsupported'
+          : code === MediaError.MEDIA_ERR_DECODE
+            ? 'decode'
+            : code === MediaError.MEDIA_ERR_NETWORK
+              ? 'network'
+              : 'other';
+      const message =
+        kind === 'unsupported'
           ? 'This format is not supported (or the host blocks direct playback).'
-          : code === MediaError.MEDIA_ERR_NETWORK
-            ? 'Network error while loading the video.'
-            : 'Could not play this video.';
-      this.cb?.({ type: 'error', message });
+          : kind === 'decode'
+            ? 'This video’s codec cannot be decoded by your browser.'
+            : kind === 'network'
+              ? 'Network error while loading the video.'
+              : 'Could not play this video.';
+      this.cb?.({ type: 'error', message, kind });
     });
 
     if (item.kind === 'hls' && !video.canPlayType('application/vnd.apple.mpegurl')) {

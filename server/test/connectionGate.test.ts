@@ -39,7 +39,7 @@ describe('ConnectionGate', () => {
   it('admits a burst up to capacity synchronously, then staggers the excess', () => {
     vi.useFakeTimers();
     try {
-      let clock = 0;
+      const clock = 0;
       const gate = new ConnectionGate({
         maxConnections: 1000,
         burstPerSec: 5,

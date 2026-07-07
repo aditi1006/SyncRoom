@@ -1,5 +1,10 @@
 import type { MediaItem, SyncState } from '@syncroom/shared';
-import { correctionFor, DRIFT_CHECK_INTERVAL_MS, expectedTime } from '@syncroom/shared';
+import {
+  correctionFor,
+  DRIFT_CHECK_INTERVAL_MS,
+  driveHlsUrl,
+  expectedTime,
+} from '@syncroom/shared';
 import { socket, serverNow } from '@/lib/socket';
 import type { PlaybackState, PlayerAdapter, PlayerEvent } from './adapters/types';
 import { YouTubeAdapter } from './adapters/youtube';
@@ -10,6 +15,9 @@ import { DriveEmbedAdapter } from './adapters/driveEmbed';
 import { useSyncDebug } from './debug';
 
 export type ControllerPhase = 'loading' | 'ready' | 'error';
+
+/** Why a Drive file dropped to the unsynced preview iframe. */
+export type DriveFallbackReason = 'timeout' | 'unsupported' | 'network' | 'unknown';
 
 export interface SyncControllerOptions {
   container: HTMLElement;
@@ -22,7 +30,7 @@ export interface SyncControllerOptions {
   onError: (message: string) => void;
   onEnded: () => void;
   /** Fired once when the provider degrades to an unsynced fallback (Drive). */
-  onSyncUnavailable: () => void;
+  onSyncUnavailable: (reason: DriveFallbackReason) => void;
   /** Fired when autoplay policy blocks playback, UI shows a click-to-play. */
   onAutoplayBlocked: () => void;
   /** Test seam: overrides the provider registry. */
@@ -112,6 +120,10 @@ export class SyncController {
   /** Consecutive stalled play attempts, beyond 1 we assume autoplay policy. */
   private stalledPlays = 0;
   private fellBack = false;
+  /** Whether we've already swapped the direct stream for the HLS transcode. */
+  private triedTranscode = false;
+  /** Native-controls flag captured at load, replayed onto swapped-in adapters. */
+  private controls = false;
 
   constructor(opts: SyncControllerOptions) {
     this.opts = opts;
@@ -123,6 +135,7 @@ export class SyncController {
 
   async load(media: MediaItem, controls: boolean): Promise<void> {
     this.media = media;
+    this.controls = controls;
     this.opts.onPhase('loading');
     useSyncDebug.getState().set({ provider: media.kind, phase: 'loading' });
 
@@ -140,7 +153,7 @@ export class SyncController {
     } catch (err) {
       if (this.disposed || this.adapter !== adapter) return;
       if (media.kind === 'drive') {
-        this.fallbackToDriveEmbed();
+        this.fallbackToDriveEmbed('network');
       } else {
         this.opts.onPhase('error');
         this.opts.onError(err instanceof Error ? err.message : 'Could not load this video.');
@@ -157,7 +170,7 @@ export class SyncController {
    * iframe. Same interface, same container, the rest of the app only sees
    * `canSync() === false`.
    */
-  private fallbackToDriveEmbed(): void {
+  private fallbackToDriveEmbed(reason: DriveFallbackReason): void {
     if (this.disposed || this.fellBack || !this.media) return;
     this.fellBack = true;
     this.clearLoadTimeout();
@@ -168,7 +181,34 @@ export class SyncController {
     embed.onEvent((ev) => this.onPlayerEvent(ev));
     void embed.load({ ...this.media, kind: 'drive-embed' }, this.opts.container);
     useSyncDebug.getState().set({ provider: 'drive-embed' });
-    this.opts.onSyncUnavailable();
+    this.opts.onSyncUnavailable(reason);
+  }
+
+  /**
+   * Swaps a Drive direct stream the browser can't decode for the server's
+   * on-the-fly HLS transcode of the same file, played by a fresh HTML5 adapter
+   * (hls.js). Unlike the preview iframe this stays fully synced. If the
+   * transcode also fails (ffmpeg absent, bad input), its error re-enters
+   * onPlayerEvent with `triedTranscode` set and drops to the unsynced embed.
+   */
+  private switchToTranscode(): void {
+    if (this.disposed || this.fellBack || this.triedTranscode || !this.media?.providerId) return;
+    this.triedTranscode = true;
+    this.adapter?.destroy();
+
+    const transcoded = new Html5Adapter();
+    this.adapter = transcoded;
+    transcoded.onEvent((ev) => this.onPlayerEvent(ev));
+    // Re-arm the stall watchdog: the encoder needs a moment to emit its first
+    // segment, and progress events will keep pushing it back as bytes arrive.
+    this.armDriveWatchdog();
+    useSyncDebug.getState().set({ provider: 'drive-transcode', phase: 'loading' });
+    this.opts.onPhase('loading');
+    void transcoded.load(
+      { ...this.media, kind: 'hls', url: driveHlsUrl(this.media.providerId) },
+      this.opts.container,
+      this.controls,
+    );
   }
 
   /* ------------------------------------------------------------------ */
@@ -233,7 +273,7 @@ export class SyncController {
   private armDriveWatchdog(): void {
     this.clearLoadTimeout();
     this.loadTimeout = setTimeout(() => {
-      if (!this.disposed && !this.adapter?.isReady()) this.fallbackToDriveEmbed();
+      if (!this.disposed && !this.adapter?.isReady()) this.fallbackToDriveEmbed('timeout');
     }, DRIVE_STALL_TIMEOUT_MS);
   }
 
@@ -325,7 +365,26 @@ export class SyncController {
       }
       case 'error':
         if (this.media?.kind === 'drive' && !this.fellBack) {
-          this.fallbackToDriveEmbed();
+          // A browser media error on a Drive stream. An unsupported container/
+          // codec (MPEG-2 .MPG, MKV, H.265…) can't play directly, but the
+          // server can re-encode it to H.264/AAC HLS, which DOES play in this
+          // synced player. Try that once before conceding to Drive's unsynced
+          // preview iframe. A pure network error won't be helped by transcoding.
+          if (
+            !this.triedTranscode &&
+            ev.kind !== 'network' &&
+            this.media.providerId
+          ) {
+            this.switchToTranscode();
+            return;
+          }
+          const reason: DriveFallbackReason =
+            ev.kind === 'unsupported' || ev.kind === 'decode'
+              ? 'unsupported'
+              : ev.kind === 'network'
+                ? 'network'
+                : 'unknown';
+          this.fallbackToDriveEmbed(reason);
         } else {
           this.opts.onPhase('error');
           this.opts.onError(ev.message);

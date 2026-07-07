@@ -6,6 +6,8 @@
  * rebuild. Defaults are tuned for a single ~512 MB / shared-CPU instance.
  */
 
+import ffmpegStatic from 'ffmpeg-static';
+
 function int(name: string, fallback: number): number {
   const raw = process.env[name];
   if (raw === undefined || raw.trim() === '') return fallback;
@@ -60,6 +62,27 @@ export const config = {
    * requests get a 503 + Retry-After instead of degrading everyone.
    */
   maxDriveStreams: int('MAX_DRIVE_STREAMS', 8),
+
+  /**
+   * On-the-fly Drive transcoding (ffmpeg → HLS). Used when a Drive file's
+   * container/codec can't play in a browser <video> (e.g. MPEG-2 .MPG, MKV):
+   * the proxy re-encodes the stream to H.264/AAC HLS so it still plays in the
+   * SYNCED player instead of dropping to Drive's un-syncable preview iframe.
+   *
+   * This is CPU-heavy (a live re-encode per distinct file, shared across the
+   * viewers watching it), so it is capped hard and disabled where ffmpeg is
+   * absent (the request 502s and the client falls back to the unsynced embed,
+   * exactly as before). `ffmpegPath` lets a host point at a non-PATH binary.
+   */
+  transcodeEnabled: bool('TRANSCODE_ENABLED', true),
+  // Prefer an explicit override, then the bundled static binary (works on a
+  // bare Render/clone with no system ffmpeg), then whatever is on PATH.
+  ffmpegPath: process.env.FFMPEG_PATH?.trim() || ffmpegStatic || 'ffmpeg',
+  maxTranscodeSessions: int('MAX_TRANSCODE_SESSIONS', 2),
+  /** How long a first HLS segment may take before the request gives up. */
+  transcodeStartTimeoutMs: int('TRANSCODE_START_TIMEOUT_MS', 25_000),
+  /** Idle grace after the last playlist/segment hit before a session is reaped. */
+  transcodeIdleMs: int('TRANSCODE_IDLE_MS', 60_000),
 
   /**
    * Self-restart guard. When RSS exceeds this many MB the process logs and

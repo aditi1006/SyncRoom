@@ -10,6 +10,7 @@ import type { AppServer } from './handlers';
 import { registerHandlers } from './handlers';
 import { RoomManager } from './roomManager';
 import { driveProxy } from './driveProxy';
+import { TranscodeError, transcodeManager } from './transcode';
 import { makeOriginCheck, parseAllowedOrigins } from './cors';
 import { config } from './config';
 import { ConnectionGate } from './connectionGate';
@@ -51,10 +52,44 @@ app.get('/drive/:id', (req: Request, res: Response, next: NextFunction) => {
     return;
   }
   activeDriveStreams += 1;
-  res.on('close', () => {
+  // Release exactly once. A single movie opens several concurrent range
+  // requests, so a leaked slot here quickly starves the cap and 503s every
+  // later load; guard against double-fire and differing close/finish semantics
+  // across Node versions so the count can never drift up (or below zero).
+  let released = false;
+  const release = (): void => {
+    if (released) return;
+    released = true;
     activeDriveStreams -= 1;
-  });
+  };
+  res.on('close', release);
+  res.on('finish', release);
   void driveProxy(req, res).catch(next);
+});
+
+// HLS transcode of a Drive file whose container/codec a browser can't decode
+// (MPEG-2 .MPG, MKV, AVI…). One ffmpeg → HLS encode per file id, shared by all
+// its viewers, so the video still plays in the SYNCED player. `:file` is either
+// `index.m3u8` (the playlist) or a `segNNNNN.ts` chunk; the manager validates
+// the id/name and streams from its temp dir. A failure (ffmpeg absent, bad
+// input) surfaces as 502/503 and the client falls back to the unsynced embed.
+app.get('/drive/:id/hls/:file', (req: Request, res: Response) => {
+  const id = String(req.params.id ?? '');
+  const file = String(req.params.file ?? '');
+  transcodeManager.serve(id, file, res).catch((err: unknown) => {
+    if (res.headersSent) {
+      res.destroy();
+      return;
+    }
+    const kind = err instanceof TranscodeError ? err.kind : 'ffmpeg';
+    if (kind === 'bad-id') {
+      res.status(400).json({ error: 'Invalid Drive file id.' });
+    } else if (kind === 'busy') {
+      res.status(503).set('Retry-After', '10').json({ error: 'Server busy, please retry shortly.' });
+    } else {
+      res.status(502).json({ error: 'Could not transcode this Drive file for synced playback.' });
+    }
+  });
 });
 
 // In single-process deployments the server also serves the built SPA. In split
@@ -156,6 +191,8 @@ function shutdown(code = 0): void {
   if (shuttingDown) return;
   shuttingDown = true;
   if (memoryTimer) clearInterval(memoryTimer);
+  // Kill any live ffmpeg encoders and remove their temp dirs.
+  void transcodeManager.dispose();
   // Stop new work, let in-flight sockets close, then exit. The unref'd timer is
   // a hard backstop so a hung connection can't block the restart.
   io.close();
